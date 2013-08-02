@@ -9,10 +9,7 @@
 		<script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
 
 		<script type="text/javascript">
-			var flot_temp_A0=[];
-			var flot_temp_A1=[];
-			var flot_temp_A2=[];
-			var flot_temp_A3=[];
+			var flot_temps=[];
 			var flot_data_size=300;
 			var flot_plot;
 			var flot_update_interval=500;
@@ -43,18 +40,22 @@
 
 			function flot_setup()
 			{
-				for(var ii=0;ii<flot_data_size;++ii)
+				var flot_graph_array=[];
+
+				for(var ii=0;ii<4;++ii)
 				{
-					flot_temp_A0[ii]=0;
-					flot_temp_A1[ii]=10;
-					flot_temp_A2[ii]=20;
-					flot_temp_A3[ii]=30;
+					flot_temps[ii]=[];
+
+					for(var jj=0;jj<flot_data_size;++jj)
+						flot_temps[ii][jj]=0;
+
+					flot_graph_array[ii]=flot_pack_xy(flot_temps[ii]);
 				}
 
 				document.getElementById("flot_plot").style.width=flot_width+"px";
 				document.getElementById("flot_plot").style.height=flot_height+"px";
 
-				flot_plot=$.plot("#flot_plot",[flot_pack_xy(flot_temp_A0),flot_pack_xy(flot_temp_A1),flot_pack_xy(flot_temp_A2),flot_pack_xy(flot_temp_A3)],
+				flot_plot=$.plot("#flot_plot",flot_graph_array,
 				{
 					series:{shadowSize:0},
 					xaxis:{show:flot_x_show,min:flot_x_min,max:flot_x_max},
@@ -76,17 +77,16 @@
 
 							if(return_json)
 							{
-								flot_temp_A0=flot_temp_A0.slice(1);
-								flot_temp_A1=flot_temp_A1.slice(1);
-								flot_temp_A2=flot_temp_A2.slice(1);
-								flot_temp_A3=flot_temp_A3.slice(1);
+								var flot_graph_array=[];
 
-								flot_temp_A0[299]=parseInt(return_json[0]);
-								flot_temp_A1[299]=parseInt(return_json[1]);
-								flot_temp_A2[299]=parseInt(return_json[2]);
-								flot_temp_A3[299]=parseInt(return_json[3]);
+								for(var ii=0;ii<4;++ii)
+								{
+									flot_temps[ii]=flot_temps[ii].slice(1);
+									flot_temps[ii][flot_temps[ii].length]=parseInt(return_json[ii]);
+									flot_graph_array[ii]=flot_pack_xy(flot_temps[ii]);
+								}
 
-								flot_plot.setData([flot_pack_xy(flot_temp_A0),flot_pack_xy(flot_temp_A1).flot_pack_xy(flot_temp_A2).flot_pack_xy(flot_temp_A3)]);
+								flot_plot.setData(flot_graph_array);
 								flot_plot.draw();
 							}
 						}

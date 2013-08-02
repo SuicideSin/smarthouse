@@ -1,3 +1,7 @@
+//GK12 Smarthouse Source
+//	Created By:		Mike Moss and Ben Neubauer
+//	Modified On:	08/101/2013
+
 //IO Stream Header
 #include <iostream>
 
@@ -108,9 +112,7 @@ bool service_client(msl::socket& client,const std::string& message)
 	//Check For a Custom Request
 	if(request=="/temperatures")
 	{
-		//Debug
-		std::cout<<"Temp request!\t"<<ss.get(0)<<std::endl;
-
+		//Package Temperatures in JSON
 		msl::json temperatures;
 		temperatures.set("0",ss.get(0));
 		temperatures.set("1",ss.get(1));
