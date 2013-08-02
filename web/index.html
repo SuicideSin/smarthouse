@@ -1,0 +1,92 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+	<head>
+		<link href="examples.css" rel="stylesheet" type="text/css">
+		<script language="javascript" type="text/javascript" src="jquery.js"></script>
+		<script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
+
+		<script type="text/javascript">
+			var flot_data=[];
+			var flot_data_size=300;
+			var flot_plot;
+			var flot_update_interval=500;
+			var flot_width=640;
+			var flot_height=480;
+			var flot_x_show=true;
+			var flot_x_min=0;
+			var flot_x_max=flot_data_size;
+			var flot_y_show=true;
+			var flot_y_min=0;
+			var flot_y_max=300;
+
+			function initialize()
+			{
+				flot_setup();
+				setInterval(flot_update,flot_update_interval);
+			}
+
+			function flot_pack_xy(data)
+			{
+				var res=[];
+
+				for(var ii=0;ii<data.length;++ii)
+					res.push([ii,data[ii]]);
+
+				return [res];
+			}
+
+			function flot_setup()
+			{
+				for(var ii=0;ii<flot_data_size;++ii)
+					flot_data[ii]=30;
+
+				document.getElementById("flot_plot").style.width=flot_width+"px";
+				document.getElementById("flot_plot").style.height=flot_height+"px";
+
+				flot_plot=$.plot("#flot_plot",flot_pack_xy(flot_data),
+				{
+					series:{shadowSize:0},
+					xaxis:{show:flot_x_show,min:flot_x_min,max:flot_x_max},
+					yaxis:{show:flot_y_show,min:flot_y_min,max:flot_y_max}
+				});
+			}
+
+			function flot_update()
+			{
+				var xmlhttp=new XMLHttpRequest();
+
+				xmlhttp.onreadystatechange=function()
+				{
+					if(xmlhttp.readyState==4&&xmlhttp.status==200)
+					{
+						try
+						{
+							var return_json=JSON.parse(xmlhttp.responseText);
+
+							if(return_json)
+							{
+								flot_data=flot_data.slice(1);
+								flot_data[299]=parseInt(return_json[0]);
+
+								flot_plot.setData(flot_pack_xy(flot_data));
+								flot_plot.draw();
+							}
+						}
+						catch(e)
+						{}
+					}
+				}
+
+				xmlhttp.open("GET",encodeURIComponent("temperatures"),true);
+				xmlhttp.send(null);
+			}
+		</script>
+	</head>
+	<body onload="initialize();">
+		<title>Flot Working?!</title>
+		<div id="flot_plot"></div>
+	</body>
+</html>
