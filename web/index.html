@@ -1,14 +1,20 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-
 <html>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-
 	<head>
-		<link href="examples.css" rel="stylesheet" type="text/css">
-		<script language="javascript" type="text/javascript" src="jquery.js"></script>
-		<script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
+		<title>Smarthouse Control</title>
 
+
+		<div>
+			<center><img src="http://facilities.alaska.edu/ua/eworf/images/UAF_LOGO.gif"><br>
+			CyberAK Smarthouse Control
+
+		</div>
+		<hr>
+		<script language="javascript" type="text/javascript" src="jscolor/jscolor.js"></script>
+		<script language="javascript" type="text/javascript" src="jquery.min.js"></script>
+		<script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
+		<link href="examples.css" rel="stylesheet" type="text/css">
 		<script type="text/javascript">
+
 			var flot_temps=[];
 			var flot_data_size=300;
 			var flot_plot;
@@ -19,8 +25,8 @@
 			var flot_x_min=0;
 			var flot_x_max=flot_data_size;
 			var flot_y_show=true;
-			var flot_y_min=0;
-			var flot_y_max=300;
+			var flot_y_min=55;
+			var flot_y_max=100;
 
 			function initialize()
 			{
@@ -82,7 +88,7 @@
 								for(var ii=0;ii<4;++ii)
 								{
 									flot_temps[ii]=flot_temps[ii].slice(1);
-									flot_temps[ii][flot_temps[ii].length]=parseInt(return_json[ii]);
+									flot_temps[ii][flot_temps[ii].length]=((parseInt(return_json[ii])*5/1023)*100-50)*9/5+32;
 									flot_graph_array[ii]=flot_pack_xy(flot_temps[ii]);
 								}
 
@@ -95,13 +101,58 @@
 					}
 				}
 
-				xmlhttp.open("GET",encodeURIComponent("temperatures"),true);
+				xmlhttp.open("GET",encodeURIComponent("temperatures?"),true);
+				xmlhttp.send(null);
+			}
+
+			function updateColor1(color)
+			{
+				var xmlhttp = new XMLHttpRequest();
+				var red=Math.round(color.rgb[0]*255);
+				var green=Math.round(color.rgb[1]*255);
+				var blue=Math.round(color.rgb[2]*255);
+
+				xmlhttp.open("GET", encodeURIComponent("color1?"+red.toString()+'?'+green.toString()+'?'+blue.toString()+'?'),true);
+				xmlhttp.send(null);
+			}
+			function updateColor2(color)
+			{
+				var xmlhttp = new XMLHttpRequest();
+				var red=Math.round(color.rgb[0]*255);
+				var green=Math.round(color.rgb[1]*255);
+				var blue=Math.round(color.rgb[2]*255);
+
+				xmlhttp.open("GET", encodeURIComponent("color2?"+red.toString()+'?'+green.toString()+'?'+blue.toString()+'?'),true);
+				xmlhttp.send(null);
+			}
+			function updateColor3(color)
+			{
+				var xmlhttp = new XMLHttpRequest();
+				var red=Math.round(color.rgb[0]*255);
+				var green=Math.round(color.rgb[1]*255);
+				var blue=Math.round(color.rgb[2]*255);
+
+				xmlhttp.open("GET", encodeURIComponent("color3?"+red.toString()+'?'+green.toString()+'?'+blue.toString()+'?'),true);
+				xmlhttp.send(null);
+			}
+			function updateColor4(color)
+			{
+				var xmlhttp = new XMLHttpRequest();
+				var red=Math.round(color.rgb[0]*255);
+				var green=Math.round(color.rgb[1]*255);
+				var blue=Math.round(color.rgb[2]*255);
+
+				xmlhttp.open("GET", encodeURIComponent("color4?"+red.toString()+'?'+green.toString()+'?'+blue.toString()+'?'),true);
 				xmlhttp.send(null);
 			}
 		</script>
-	</head>
+		</head>
 	<body onload="initialize();">
-		<title>Flot Working?!</title>
+		Room 1:<input class="color" onchange="updateColor1(this.color);" readonly><br>
+		Room 2:<input class="color" onchange="updateColor2(this.color);" readonly><br>
+		Room 3:<input class="color" onchange="updateColor3(this.color);" readonly><br>
+		Room 4:<input class="color" onchange="updateColor4(this.color);" readonly><br>
+		Temp:<input id="temp" readonly><br>
 		<div id="flot_plot"></div>
 	</body>
 </html>
