@@ -1,6 +1,6 @@
 //GK12 Smarthouse Source
 //	Created By:		Mike Moss and Ben Neubauer
-//	Modified On:	08/101/2013
+//	Modified On:	08/01/2013
 
 //IO Stream Header
 #include <iostream>
