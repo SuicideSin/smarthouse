@@ -1,20 +1,22 @@
+<!--
+GK12 Smarthouse Web Source
+	Created By:		Mike Moss and Ben Neubauer
+	Modified On:	08/03/2013
+-->
+
 <html>
 	<head>
-		<title>Smarthouse Control</title>
-
-
-		<div>
-			<center><img src="http://facilities.alaska.edu/ua/eworf/images/UAF_LOGO.gif"><br>
-			CyberAK Smarthouse Control
-
-		</div>
-		<hr>
+		<!--Color Selector Source-->
 		<script language="javascript" type="text/javascript" src="jscolor/jscolor.js"></script>
+
+		<!--Flot Source-->
 		<script language="javascript" type="text/javascript" src="jquery.min.js"></script>
 		<script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
 		<link href="examples.css" rel="stylesheet" type="text/css">
-		<script type="text/javascript">
 
+		<!--Smarthouse Source-->
+		<script type="text/javascript">
+			//Flot Global Variables
 			var flot_temps=[];
 			var flot_data_size=300;
 			var flot_plot;
@@ -28,26 +30,37 @@
 			var flot_y_min=55;
 			var flot_y_max=100;
 
+			//Initialize Function
 			function initialize()
 			{
+				//Initialize Flot
 				flot_setup();
+
+				//Set Flot Update Interval
 				setInterval(flot_update,flot_update_interval);
 			}
 
+			//Flot Pack XY Function (Makes a single column array into a double column array with data numberings)
 			function flot_pack_xy(data)
 			{
+				//Create Array
 				var res=[];
 
+				//Pack X's With Y's
 				for(var ii=0;ii<data.length;++ii)
 					res.push([ii,data[ii]]);
 
+				//Return Double Column Array
 				return res;
 			}
 
+			//Flot Initialize Function
 			function flot_setup()
 			{
+				//Flot Graphs Array (Array containing graph arrays)
 				var flot_graph_array=[];
 
+				//Create Four Arrays Full of Zeros
 				for(var ii=0;ii<4;++ii)
 				{
 					flot_temps[ii]=[];
@@ -58,9 +71,11 @@
 					flot_graph_array[ii]=flot_pack_xy(flot_temps[ii]);
 				}
 
+				//Set Graph Width and Height
 				document.getElementById("flot_plot").style.width=flot_width+"px";
 				document.getElementById("flot_plot").style.height=flot_height+"px";
 
+				//Create Graph
 				flot_plot=$.plot("#flot_plot",flot_graph_array,
 				{
 					series:{shadowSize:0},
@@ -69,22 +84,29 @@
 				});
 			}
 
+			//Flot Update Function
 			function flot_update()
 			{
+				//Create XML HTTP Request
 				var xmlhttp=new XMLHttpRequest();
 
+				//Set XML HTTP Request Return Function
 				xmlhttp.onreadystatechange=function()
 				{
 					if(xmlhttp.readyState==4&&xmlhttp.status==200)
 					{
 						try
 						{
+							//Create JSON Object From Return Data
 							var return_json=JSON.parse(xmlhttp.responseText);
 
+							//Check For Valid JSON Object
 							if(return_json)
 							{
+								//Flot Graphs Array (Array containing graph arrays)
 								var flot_graph_array=[];
 
+								//Create Four Arrays From Return Data
 								for(var ii=0;ii<4;++ii)
 								{
 									flot_temps[ii]=flot_temps[ii].slice(1);
@@ -92,6 +114,7 @@
 									flot_graph_array[ii]=flot_pack_xy(flot_temps[ii]);
 								}
 
+								//Update Graph Data and Redraw Graph
 								flot_plot.setData(flot_graph_array);
 								flot_plot.draw();
 							}
@@ -101,57 +124,37 @@
 					}
 				}
 
+				//Send XML HTTP Request
 				xmlhttp.open("GET",encodeURIComponent("temperatures?"),true);
 				xmlhttp.send(null);
 			}
 
-			function updateColor1(color)
+			//Update Color Function
+			function update_colors(number,color)
 			{
-				var xmlhttp = new XMLHttpRequest();
-				var red=Math.round(color.rgb[0]*255);
-				var green=Math.round(color.rgb[1]*255);
-				var blue=Math.round(color.rgb[2]*255);
+				//Pack Color Data Into JSON
+				var colors={};
+				colors["red"+number]=Math.round(color.rgb[0]*255).toString();
+				colors["green"+number]=Math.round(color.rgb[1]*255).toString();
+				colors["blue"+number]=Math.round(color.rgb[2]*255).toString();
 
-				xmlhttp.open("GET", encodeURIComponent("color1?"+red.toString()+'?'+green.toString()+'?'+blue.toString()+'?'),true);
-				xmlhttp.send(null);
-			}
-			function updateColor2(color)
-			{
-				var xmlhttp = new XMLHttpRequest();
-				var red=Math.round(color.rgb[0]*255);
-				var green=Math.round(color.rgb[1]*255);
-				var blue=Math.round(color.rgb[2]*255);
-
-				xmlhttp.open("GET", encodeURIComponent("color2?"+red.toString()+'?'+green.toString()+'?'+blue.toString()+'?'),true);
-				xmlhttp.send(null);
-			}
-			function updateColor3(color)
-			{
-				var xmlhttp = new XMLHttpRequest();
-				var red=Math.round(color.rgb[0]*255);
-				var green=Math.round(color.rgb[1]*255);
-				var blue=Math.round(color.rgb[2]*255);
-
-				xmlhttp.open("GET", encodeURIComponent("color3?"+red.toString()+'?'+green.toString()+'?'+blue.toString()+'?'),true);
-				xmlhttp.send(null);
-			}
-			function updateColor4(color)
-			{
-				var xmlhttp = new XMLHttpRequest();
-				var red=Math.round(color.rgb[0]*255);
-				var green=Math.round(color.rgb[1]*255);
-				var blue=Math.round(color.rgb[2]*255);
-
-				xmlhttp.open("GET", encodeURIComponent("color4?"+red.toString()+'?'+green.toString()+'?'+blue.toString()+'?'),true);
+				//Create and Send XML HTTP Request
+				var xmlhttp=new XMLHttpRequest();
+				xmlhttp.open("GET", encodeURIComponent("colors="+JSON.stringify(colors)),true);
 				xmlhttp.send(null);
 			}
 		</script>
-		</head>
+	</head>
 	<body onload="initialize();">
-		Room 1:<input class="color" onchange="updateColor1(this.color);" readonly><br>
-		Room 2:<input class="color" onchange="updateColor2(this.color);" readonly><br>
-		Room 3:<input class="color" onchange="updateColor3(this.color);" readonly><br>
-		Room 4:<input class="color" onchange="updateColor4(this.color);" readonly><br>
+		<title>CyberAK Smarthouse Control</title>
+		<center><img src="http://facilities.alaska.edu/ua/eworf/images/UAF_LOGO.gif"></center>
+		<br>
+		<center>CyberAK Smarthouse Control</center>
+		<hr>
+		Room 1:<input class="color" onchange="update_colors(0,this.color);" readonly><br>
+		Room 2:<input class="color" onchange="update_colors(1,this.color);" readonly><br>
+		Room 3:<input class="color" onchange="update_colors(2,this.color);" readonly><br>
+		Room 4:<input class="color" onchange="update_colors(3,this.color);" readonly><br>
 		Temp:<input id="temp" readonly><br>
 		<div id="flot_plot"></div>
 	</body>
