@@ -34,6 +34,19 @@ bool service_client(msl::socket& client,const std::string& message);
 //Global Serial Sync Object
 SerialSync ss("/dev/ttyUSB0",9600);
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 //Linux Headers For Accessing File Descriptor and SPI Lines
 #include <stdio.h>
 #include <unistd.h>
