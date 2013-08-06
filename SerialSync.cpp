@@ -7,7 +7,8 @@
 #include <stdexcept>
 
 SerialSync::SerialSync(const std::string& port_name,const unsigned int baud):
-	_name(port_name),_baud(baud),_port(_name,_baud),_current_index(0),_packet_pointer(0),_temp_data(0)
+	_name(port_name),_baud(baud),_port(_name,_baud),_current_index(0),
+	_packet_pointer(0),_temp_data(0)
 {
 	for(unsigned int ii=0;ii<SERIAL_SYNC_DATA_SIZE;++ii)
 		_data[ii]=0;
