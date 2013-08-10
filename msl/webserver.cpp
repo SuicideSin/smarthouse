@@ -1,6 +1,6 @@
 //Web Server Source
 //	Created By:		Mike Moss
-//	Modified On:	06/20/2013
+//	Modified On:	08/09/2013
 
 //Required Libraries:
 //	wsock32 (windows only)
@@ -24,8 +24,8 @@
 #include "time_util.hpp"
 
 //Constructor (Default)
-msl::webserver::webserver(const std::string& address,bool(*user_service_client)(msl::socket& client,const std::string& message)):
-	_user_service_client(user_service_client),_socket(address)
+msl::webserver::webserver(const std::string& address,bool(*user_service_client)(msl::socket& client,const std::string& message),
+	const std::string& web_directory):_user_service_client(user_service_client),_socket(address),_web_directory(web_directory)
 {}
 
 //Boolean Operator (Tests if Server is Good)
@@ -75,7 +75,7 @@ void msl::webserver::update()
 			char byte='\n';
 
 			//Get a Byte
-			if(_clients[ii].available()>0&&_clients[ii].read(&byte,1)==1)
+			while(_clients[ii].available()>0&&_clients[ii].read(&byte,1)==1)
 			{
 				//Add the Byte to Client Buffer
 				_client_messages[ii]+=byte;
@@ -135,9 +135,6 @@ void msl::webserver::service_client(msl::socket& client,const std::string& messa
 		//If User Options Fail
 		if(_user_service_client==NULL||!_user_service_client(client,msl::http_to_ascii(message)))
 		{
-			//Web Root Variable (Where your web files are)
-			std::string web_root="web";
-
 			//Check for Index
 			if(request=="/")
 				request="/index.html";
@@ -173,11 +170,11 @@ void msl::webserver::service_client(msl::socket& client,const std::string& messa
 			std::string file;
 
 			//Load File
-			if(msl::file_to_string(web_root+request,file,true))
+			if(msl::file_to_string(_web_directory+request,file,true))
 				client<<msl::http_pack_string(file,mime_type,false);
 
 			//Bad File
-			else if(msl::file_to_string(web_root+"/not_found.html",file,true))
+			else if(msl::file_to_string(_web_directory+"/not_found.html",file,true))
 				client<<msl::http_pack_string(file);
 		}
 
