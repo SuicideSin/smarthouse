@@ -21,14 +21,17 @@ GK12 Smarthouse Web Source
 			var flot_data_size=300;
 			var flot_plot;
 			var flot_update_interval=500;
-			var flot_width=640;
-			var flot_height=480;
-			var flot_x_show=true;
+			var flot_width=320;
+			var flot_height=240;
+			var flot_x_show=false;
 			var flot_x_min=0;
 			var flot_x_max=flot_data_size;
 			var flot_y_show=true;
-			var flot_y_min=55;
-			var flot_y_max=100;
+			var flot_y_min=60;
+			var flot_y_max=80;
+
+			//Global Desired Temperature Variable
+			var desired_temp=75;
 
 			//Initialize Function
 			function initialize()
@@ -103,6 +106,10 @@ GK12 Smarthouse Web Source
 							//Check For Valid JSON Object
 							if(return_json)
 							{
+								//Set Updated Desired Temperature
+								desired_temp=parseInt(return_json.desired);
+								document.getElementById("desired_temp").value=desired_temp;
+
 								//Flot Graphs Array (Array containing graph arrays)
 								var flot_graph_array=[];
 
@@ -143,6 +150,26 @@ GK12 Smarthouse Web Source
 				xmlhttp.open("GET", encodeURIComponent("colors="+JSON.stringify(colors)),true);
 				xmlhttp.send(null);
 			}
+
+			//Decrement Desired Temperature Function
+			function decrement_desired_temp()
+			{
+				//Create and Send XML HTTP Request
+				var xmlhttp=new XMLHttpRequest();
+				var new_temp=desired_temp-1;
+				xmlhttp.open("GET", encodeURIComponent("desired_temp="+new_temp),true);
+				xmlhttp.send(null);
+			}
+
+			//Increment Desired Temperature Function
+			function increment_desired_temp()
+			{
+				//Create and Send XML HTTP Request
+				var xmlhttp=new XMLHttpRequest();
+				var new_temp=desired_temp+1;
+				xmlhttp.open("GET", encodeURIComponent("desired_temp="+new_temp),true);
+				xmlhttp.send(null);
+			}
 		</script>
 	</head>
 	<body onload="initialize();">
@@ -151,11 +178,12 @@ GK12 Smarthouse Web Source
 		<br>
 		<center>CyberAK Smarthouse Control</center>
 		<hr>
-		Room 1:<input class="color" onchange="update_colors(0,this.color);" readonly><br>
-		Room 2:<input class="color" onchange="update_colors(1,this.color);" readonly><br>
-		Room 3:<input class="color" onchange="update_colors(2,this.color);" readonly><br>
-		Room 4:<input class="color" onchange="update_colors(3,this.color);" readonly><br>
-		Temp:<input id="temp" readonly><br>
+		Room 1:<input class="color" onchange="update_colors(0,this.color);" readonly /><br>
+		Room 2:<input class="color" onchange="update_colors(1,this.color);" readonly /><br>
+		Room 3:<input class="color" onchange="update_colors(2,this.color);" readonly /><br>
+		Room 4:<input class="color" onchange="update_colors(3,this.color);" readonly /><br>
+		Temp:<input type="button" value="-" onclick="decrement_desired_temp();" /><input id="desired_temp" readonly/><input type="button" value="+" onclick="increment_desired_temp();" />
+		<br>
 		<div id="flot_plot"></div>
 	</body>
 </html>

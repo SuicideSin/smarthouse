@@ -25,6 +25,9 @@
 //String Utility Header
 #include "msl/string_util.hpp"
 
+//Time Utility Header
+#include "msl/time_util.hpp"
+
 //Web Server Header
 #include "msl/webserver.hpp"
 
@@ -150,7 +153,10 @@ void clearWS2803()
 
 
 
-
+//Global Temperature Variable
+int desired_temp_min=60;
+int desired_temp_max=75;
+int desired_temp=75;
 
 //Main
 int main(int argc,char* argv[])
@@ -212,6 +218,9 @@ int main(int argc,char* argv[])
 		server_passed=false;
 	}
 
+	//Global Timer Variable (TESTING)
+	long timer=msl::millis();
+
 	//Be a server...forever...
 	while(server_passed)
 	{
@@ -220,6 +229,34 @@ int main(int argc,char* argv[])
 
 		//Update Serial
 		ss.loop();
+
+		//Check Temperatures (Every 200ms)
+		if(msl::millis()-timer>=200)
+		{
+			//Temperature 0
+			if(((ss.get(0)*5/1023.0)*100-50)*9/5.0+32>desired_temp)
+				ss.set(5,0);
+			else
+				ss.set(5,1);
+
+			if(((ss.get(1)*5/1023.0)*100-50)*9/5.0+32>desired_temp)
+				ss.set(6,0);
+			else
+				ss.set(6,1);
+
+			if(((ss.get(2)*5/1023.0)*100-50)*9/5.0+32>desired_temp)
+				ss.set(7,0);
+			else
+				ss.set(7,1);
+
+			if(((ss.get(3)*5/1023.0)*100-50)*9/5.0+32>desired_temp)//Room 4
+				ss.set(8,0);
+			else
+				ss.set(8,1);
+
+			//Update Timer
+			timer=msl::millis();
+		}
 
 		//Give OS a Break
 		usleep(0);
@@ -249,6 +286,7 @@ bool service_client(msl::socket& client,const std::string& message)
 		temperatures.set("1",ss.get(1));
 		temperatures.set("2",ss.get(2));
 		temperatures.set("3",ss.get(3));
+		temperatures.set("desired",desired_temp);
 
 		//Send Temperatures
 		client<<msl::http_pack_string(temperatures.str(),"text/plain");
@@ -296,6 +334,24 @@ bool service_client(msl::socket& client,const std::string& message)
 		}
 
 		loadWS2803();
+
+		//Return True (We serviced the client)
+		return true;
+	}
+
+	//Check For Temperature Set Request
+	else if(msl::starts_with(request,"/desired_temp="))
+	{
+		//Set Desired Temperature
+		desired_temp=msl::to_int(request.substr(14,request.size()-14));
+
+		//Limit Low Temperature
+		if(desired_temp<desired_temp_min)
+			desired_temp=desired_temp_min;
+
+		//Limit High Temperature
+		if(desired_temp>desired_temp_max)
+			desired_temp=desired_temp_max;
 
 		//Return True (We serviced the client)
 		return true;

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<!--
+ canvas_koch.html
+ Glenn G. Chappell
+ 15 Nov 2012
+
+ For CS 381 Fall 2012
+ HTML5 Canvas Demo: Koch Snowflake
+ JavaScript code included in HTML file
+-->
+<head>
+<title>HTML5 Canvas Demo: Koch Snowflake</title>
+<script type="text/javascript">
+var c;  // Canvas 2-D context
+
+// Turtle-Graphics Functions
+
+// turtleInit
+// Initialize turtle.
+// Before any other turtle function calls, do beginPath() and then call
+//  this function.
+// Uses global canvas 2d context c.
+function turtleInit()
+{
+	c.moveTo(0, 0);
+}
+
+
+// turtleFwd
+// Go forward given distance, dragging pen. Adds this line segment to
+//  current path.
+// Assumes we are in a path (beginPath has been called) and turtle has
+//  been initialized.
+// Uses global canvas 2d context c.
+function turtleFwd(dist)
+{
+	c.translate(dist, 0);
+	c.lineTo(0, 0);
+}
+
+
+// turtleTurn
+// Turn turtle clockwise given angle, in degrees.
+// Assumes we are in a path (beginPath has been called) and turtle has
+//  been initialized.
+// Uses global canvas 2d context c.
+function turtleTurn(degs)
+{
+	c.rotate(degs*Math.PI/180.);
+}
+
+
+// doKochSegment
+// Adds Koch segment with given level (0: line segment) and size
+//  (length) to current path. Bumps are to turtle's left. Uses current
+//  transformation.
+// Assumes we are in a path (beginPath has been called) and turtle has
+//  been initialized.
+// Uses global canvas 2d context c.
+function doKochSegment(level, size)
+{
+	if (level == 0)
+	{
+		turtleFwd(size);
+		return;
+	}
+	doKochSegment(level-1, size/3);
+	turtleTurn(-60);
+	doKochSegment(level-1, size/3);
+	turtleTurn(120);
+	doKochSegment(level-1, size/3);
+	turtleTurn(-60);
+	doKochSegment(level-1, size/3);
+}
+
+
+// doKochSnowflake
+// Adds Koch Snowflake with given level (0: triangle) and size
+//  (length) to current path. Uses current transformation.
+// Assumes we are in a path (beginPath has been called) and turtle has
+//  been initialized.
+// Uses global canvas 2d context c.
+function doKochSnowflake(level, size)
+{
+	for (i = 0; i < 3; ++i)
+	{
+		doKochSegment(level, size);
+		turtleTurn(120);
+	}
+}
+
+
+// getContext
+// Gets 2d drawing context from canvas with given id. Returns context on
+//  success. Does alert & returns false on failure.
+function getContext(canvasid)
+{
+	var canvas = document.getElementById(canvasid);
+	if (!canvas || !canvas.getContext)
+	{
+		alert("Could not get context");
+		return false;
+	}
+	var context = canvas.getContext("2d");
+	if (!context)
+	{
+		alert("Could not get context");
+		return false;
+	}
+	return context;
+}
+
+
+// doit
+// Do whatever needs to be done.
+// In this case: get drawing context and make a Koch Snowflake.
+function doit()
+{
+	c = getContext("canvas1");
+	if (!c) return;
+
+	c.translate(100, 110);
+	c.beginPath();
+	turtleInit();
+	doKochSnowflake(5, 300);
+	c.strokeStyle = "blue";
+	c.lineWidth = 2;
+	c.stroke();
+}
+</script>
+</head>
+<body onload="doit()">
+<h1>HTML5 Canvas Demo: Koch Snowflake</h1>
+<p>
+Here is a canvas:
+<p>
+<canvas id="canvas1" width="500" height="400"
+  style="border: 1px solid black"
+></canvas>
+</body>
+</html>
+
