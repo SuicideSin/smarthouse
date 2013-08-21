@@ -75,7 +75,7 @@ void msl::webserver::update()
 			char byte='\n';
 
 			//Get a Byte
-			if(_clients[ii].available()>0&&_clients[ii].read(&byte,1)==1)
+			while(_clients[ii].available()>0&&_clients[ii].read(&byte,1)==1)
 			{
 				//Add the Byte to Client Buffer
 				_client_messages[ii]+=byte;

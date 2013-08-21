@@ -2,7 +2,17 @@
 //	Created By:		Mike Moss and Ben Neubauer
 //	Modified On:	08/03/2013
 
-//THIS IS LINUX ONLY
+//Serial Sync Variables
+//0			Temp Sensor
+//1			Temp Sensor
+//2			Temp Sensor
+//3			Temp Sensor
+//4			Light Sensor
+//5-8		Fans
+//9-11		BRG
+//12-14		BRG
+//15-17		BRG
+//18-20		BRG
 
 //IO Stream Header
 #include <iostream>
@@ -28,6 +38,9 @@
 //Time Utility Header
 #include "msl/time_util.hpp"
 
+//Vector Header
+#include <vector>
+
 //Web Server Header
 #include "msl/webserver.hpp"
 
@@ -37,126 +50,13 @@ bool service_client(msl::socket& client,const std::string& message);
 //Global Serial Sync Object
 SerialSync ss("/dev/ttyUSB0",9600);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-//Linux Headers For Accessing File Descriptor and SPI Lines
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <stdint.h>
-#include <getopt.h>
-#include <sys/ioctl.h>
-#include <linux/types.h>
-#include <linux/spi/spidev.h>
-
-static void pabort(const char *s)
-{
-	perror(s);
-	abort();
-}
-
-static const char* device="/dev/spidev0.0";
-static uint8_t mode;
-static uint8_t bits = 8;
-static uint32_t speed = 500000;
-static uint16_t delay;
-int fd_spi;
-#define nLEDs 18
-#define nBARs 1
-uint8_t ledBar[nBARs][nLEDs];
-struct spi_ioc_transfer tr;
-
-
-int init_spi()
-{
-	fd_spi=open(device,O_RDWR);
-
-	if (fd_spi < 0)
-		pabort("can't open device");
-
-	int ret=ioctl(fd_spi, SPI_IOC_WR_MODE, &mode);
-
-	if (ret == -1)
-		pabort("can't set spi mode");
-
-	ret = ioctl(fd_spi, SPI_IOC_RD_MODE, &mode);
-
-	if (ret == -1)
-		pabort("can't get spi mode");
-
-	ret = ioctl(fd_spi, SPI_IOC_WR_BITS_PER_WORD, &bits);
-
-	if (ret == -1)
-		pabort("can't set bits per word");
-
-	ret = ioctl(fd_spi, SPI_IOC_RD_BITS_PER_WORD, &bits);
-
-	if (ret == -1)
-		pabort("can't get bits per word");
-
-	ret = ioctl(fd_spi, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
-
-	if (ret == -1)
-		pabort("can't set max speed hz");
-
-	ret = ioctl(fd_spi, SPI_IOC_RD_MAX_SPEED_HZ, &speed);
-
-	if (ret == -1)
-		pabort("can't get max speed hz");
-
-	tr.tx_buf = (unsigned long)ledBar;
-	tr.len = nBARs * nLEDs;
-	tr.delay_usecs = delay;
-	tr.speed_hz = speed;
-	tr.bits_per_word = bits;
-
-	return ret;
-}
-
-void loadWS2803()
-{
-	if(ioctl(fd_spi,SPI_IOC_MESSAGE(1),&tr)<1)
-		pabort("can't send spi message");
-}
-
-void clearWS2803()
-{
-	for(int wsOut=0;wsOut<nLEDs;++wsOut)
-	{
-		if(nBARs>1)
-			ledBar[0][wsOut]=ledBar[1][wsOut]=0x00;
-		else
-			ledBar[0][wsOut]=0x00;
-
-		loadWS2803();
-	}
-}
-
-
-
-
-
-
-
-
-
-
-//Global Temperature Variable
+//Global Temperature Variables
 int desired_temp_min=60;
 int desired_temp_max=75;
 int desired_temp=75;
+int temp_deadband=3;
+unsigned int temp_sample_size=50;
+std::vector<double> temp_samples[4];
 
 //Main
 int main(int argc,char* argv[])
@@ -194,17 +94,6 @@ int main(int argc,char* argv[])
 		server_passed=false;
 	}
 
-	//Endable SPI
-	if(init_spi()!=-1)
-	{
-		std::cout<<"SPI =)"<<std::endl;
-	}
-	else
-	{
-		std::cout<<"SPI =("<<std::endl;
-		server_passed=false;
-	}
-
 	//Check Serial
 	try
 	{
@@ -233,26 +122,33 @@ int main(int argc,char* argv[])
 		//Check Temperatures (Every 200ms)
 		if(msl::millis()-timer>=200)
 		{
-			//Temperature 0
-			if(((ss.get(0)*5/1023.0)*100-50)*9/5.0+32>desired_temp)
-				ss.set(5,0);
-			else
-				ss.set(5,1);
+			//Regulate Temperature
+			for(int ii=0;ii<4;++ii)
+			{
+				//Calculate Temperature in F
+				double temp=((ss.get(ii)*5/1023.0)*100-50)*9/5.0+32;
 
-			if(((ss.get(1)*5/1023.0)*100-50)*9/5.0+32>desired_temp)
-				ss.set(6,0);
-			else
-				ss.set(6,1);
+				//Store Temperature in Samples
+				temp_samples[ii].push_back(temp);
 
-			if(((ss.get(2)*5/1023.0)*100-50)*9/5.0+32>desired_temp)
-				ss.set(7,0);
-			else
-				ss.set(7,1);
+				//Resize Samples While Neccessary
+				while(temp_samples[ii].size()>temp_sample_size)
+					temp_samples[ii].erase(temp_samples[ii].begin());
 
-			if(((ss.get(3)*5/1023.0)*100-50)*9/5.0+32>desired_temp)//Room 4
-				ss.set(8,0);
-			else
-				ss.set(8,1);
+				//Calculate Average
+				double average=0;
+
+				for(unsigned int jj=0;jj<temp_samples[ii].size();++jj)
+					average+=temp_samples[ii][jj];
+
+				average/=static_cast<double>(temp_samples[ii].size());
+
+				//Turn On/Off Fans
+				if(average>desired_temp+temp_deadband/2.0)
+					ss.set(ii+5,0);
+				else if(average<desired_temp-temp_deadband/2.0)
+					ss.set(ii+5,1);
+			}
 
 			//Update Timer
 			timer=msl::millis();
@@ -280,12 +176,26 @@ bool service_client(msl::socket& client,const std::string& message)
 	//Check For Temperature Request
 	if(request=="/temperatures?")
 	{
+		//Calculate Averages
+		double averages[4];
+
+		for(int ii=0;ii<4;++ii)
+		{
+			averages[ii]=0;
+
+			for(unsigned int jj=0;jj<temp_samples[ii].size();++jj)
+				averages[ii]+=temp_samples[ii][jj];
+
+			if(temp_samples[ii].size()>0)
+				averages[ii]/=static_cast<double>(temp_samples[ii].size());
+		}
+
 		//Package Temperatures in JSON
 		msl::json temperatures;
-		temperatures.set("0",ss.get(0));
-		temperatures.set("1",ss.get(1));
-		temperatures.set("2",ss.get(2));
-		temperatures.set("3",ss.get(3));
+		temperatures.set("0",averages[0]);
+		temperatures.set("1",averages[1]);
+		temperatures.set("2",averages[2]);
+		temperatures.set("3",averages[3]);
 		temperatures.set("desired",desired_temp);
 
 		//Send Temperatures
@@ -304,36 +214,34 @@ bool service_client(msl::socket& client,const std::string& message)
 		//Change Color 0
 		if(colors.get("blue0")!=""&&colors.get("red0")!=""&&colors.get("green0")!="")
 		{
-			ledBar[0][0]=(uint8_t)(msl::to_int(colors.get("blue0")));
-			ledBar[0][1]=(uint8_t)(msl::to_int(colors.get("red0")));
-			ledBar[0][2]=(uint8_t)(msl::to_int(colors.get("green0")));
+			ss.set(9,(uint8_t)(msl::to_int(colors.get("blue0"))));
+			ss.set(10,(uint8_t)(msl::to_int(colors.get("red0"))));
+			ss.set(11,(uint8_t)(msl::to_int(colors.get("green0"))));
 		}
 
 		//Change Color 1
 		if(colors.get("blue1")!=""&&colors.get("red1")!=""&&colors.get("green1")!="")
 		{
-			ledBar[0][3]=(uint8_t)(msl::to_int(colors.get("blue1")));
-			ledBar[0][4]=(uint8_t)(msl::to_int(colors.get("red1")));
-			ledBar[0][5]=(uint8_t)(msl::to_int(colors.get("green1")));
+			ss.set(12,(uint8_t)(msl::to_int(colors.get("blue1"))));
+			ss.set(13,(uint8_t)(msl::to_int(colors.get("red1"))));
+			ss.set(14,(uint8_t)(msl::to_int(colors.get("green1"))));
 		}
 
 		//Change Color 2
 		if(colors.get("blue2")!=""&&colors.get("red2")!=""&&colors.get("green2")!="")
 		{
-			ledBar[0][6]=(uint8_t)(msl::to_int(colors.get("blue2")));
-			ledBar[0][7]=(uint8_t)(msl::to_int(colors.get("red2")));
-			ledBar[0][8]=(uint8_t)(msl::to_int(colors.get("green2")));
+			ss.set(15,(uint8_t)(msl::to_int(colors.get("blue2"))));
+			ss.set(16,(uint8_t)(msl::to_int(colors.get("red2"))));
+			ss.set(17,(uint8_t)(msl::to_int(colors.get("green2"))));
 		}
 
 		//Change Color 3
 		if(colors.get("blue3")!=""&&colors.get("red3")!=""&&colors.get("green3")!="")
 		{
-			ledBar[0][9]=(uint8_t)(msl::to_int(colors.get("blue3")));
-			ledBar[0][10]=(uint8_t)(msl::to_int(colors.get("red3")));
-			ledBar[0][11]=(uint8_t)(msl::to_int(colors.get("green3")));
+			ss.set(18,(uint8_t)(msl::to_int(colors.get("blue3"))));
+			ss.set(19,(uint8_t)(msl::to_int(colors.get("red3"))));
+			ss.set(20,(uint8_t)(msl::to_int(colors.get("green3"))));
 		}
-
-		loadWS2803();
 
 		//Return True (We serviced the client)
 		return true;

@@ -9,7 +9,7 @@
 #include <string>
 #include <inttypes.h>
 
-#define SERIAL_SYNC_DATA_SIZE 16
+#define SERIAL_SYNC_DATA_SIZE 64
 
 class SerialSync
 {
