@@ -69,7 +69,7 @@ GK12 Smarthouse Web Source
 					flot_temps[ii]=[];
 
 					for(var jj=0;jj<flot_data_size;++jj)
-						flot_temps[ii][jj]=0;
+						flot_temps[ii][jj]=75;
 
 					flot_graph_array[ii]=flot_pack_xy(flot_temps[ii]);
 				}
@@ -117,7 +117,7 @@ GK12 Smarthouse Web Source
 								for(var ii=0;ii<4;++ii)
 								{
 									flot_temps[ii]=flot_temps[ii].slice(1);
-									flot_temps[ii][flot_temps[ii].length]=((parseInt(return_json[ii])*5/1023)*100-50)*9/5+32;
+									flot_temps[ii][flot_temps[ii].length]=parseFloat(return_json[ii]);
 									flot_graph_array[ii]=flot_pack_xy(flot_temps[ii]);
 								}
 
