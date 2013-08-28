@@ -3,6 +3,23 @@
 
 #include <Arduino.h>
 
-void temperature_update(int pin,int temp_id_size,float* temp_values,byte temp_id[][8]);
+#include "OneWire.h"
+
+class TempSensor
+{
+	public:
+		TempSensor(const byte pin);
+		void loop(const int size,float* values,byte ids[][8]);
+
+	private:
+		bool _compare_ids(byte* lhs,byte* rhs);
+
+		OneWire _ds;
+		int _current_id;
+		long _timer;
+		bool _reading;
+		byte _data[12];
+		byte _addr[8];
+};
 
 #endif

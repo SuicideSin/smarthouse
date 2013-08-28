@@ -1,4 +1,5 @@
 #include "SerialSyncArduino.h"
+
 #include "TempSensor.h"
 
 long temp_timer=0;
@@ -12,6 +13,7 @@ byte temp_id[temp_id_size][8]=
   {0x10,0x0c,0x76,0xc2,0x02,0x08,0x00,0x70},
   {0x10,0x5e,0x8c,0xc2,0x02,0x08,0x00,0x2b}
 };
+TempSensor temp_reader(3);
 
 byte ws2803_clock_pin=7;
 byte ws2803_data_pin=8;
@@ -40,7 +42,7 @@ void setup()
   digitalWrite(light_relay_pin,LOW);
 
   ss.setup();
-  
+
   ss.set(0,75);
   ss.set(1,75);
   ss.set(2,75);
@@ -51,8 +53,8 @@ void setup()
 
 void loop()
 {
-  temperature_update(3,temp_id_size,temp_values,temp_id);
-  
+  temp_reader.loop(temp_id_size,temp_values,temp_id);
+
   ss.loop();
 
   if(millis()>temp_timer)
@@ -71,21 +73,21 @@ void loop()
 
   if(ss.get(6)!=60)
     ss.set(6,60);
-    
+
   if(ss.get(7)!=80)
     ss.set(7,80);
 
   if(ss.get(5)<ss.get(6))
     ss.set(5,ss.get(6));
-  
+
   if(ss.get(5)>ss.get(7))
     ss.set(5,ss.get(7));
-  
+
   for(int room=0;room<4;++room)
   {
     if(ss.get(room)/100.0>ss.get(5))
       digitalWrite(10+room,LOW);
-    
+
     if(ss.get(room)/100.0<ss.get(5))
       digitalWrite(10+room,HIGH);
   }

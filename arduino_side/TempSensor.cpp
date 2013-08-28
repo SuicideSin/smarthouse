@@ -1,81 +1,88 @@
 #include "TempSensor.h"
 
-#include "OneWire.h"
-
-static int current_id=0;
-static long temp_timer=0;
-static bool temp_reading=false;
-static byte data[12];
-static byte addr[8];
-
-static bool temperature_compare_ids(byte* lhs,byte* rhs)
+TempSensor::TempSensor(const byte pin):_ds(pin),_current_id(0),_timer(0),_reading(false)
 {
-  bool match=true;
+	for(byte ii=0;ii<12;++ii)
+		_data[ii]=0x00;
 
-  for(int ii=0;ii<8;++ii)
-  {
-    if(lhs[ii]!=rhs[ii])
-    {
-      match=false;
-      break;
-    }
-  }
-
-  return match;
+	for(byte ii=0;ii<8;++ii)
+		_addr[ii]=0x00;
 }
 
-void temperature_update(int pin,int temp_id_size,float* temp_values,byte temp_id[][8])
+void TempSensor::loop(const int size,float* values,byte ids[][8])
 {
-  static OneWire ds(pin);
-  
-  if(!temp_reading)
-  {
-    if(ds.search(addr)&&OneWire::crc8(addr,7)==addr[7]&&addr[0]==0x10)
-    {
-      bool found=false;
+	if(!_reading)
+	{
+		bool type_check=(_addr[0]==0x10);
+		bool crc_check=(OneWire::crc8(_addr,7)==_addr[7]);
 
-      for(int ii=1;ii<temp_id_size;++ii)
-      {
-        if(temperature_compare_ids(addr,temp_id[ii]))
-        {
-          current_id=ii;
-          found=true;
-          break;
-        }
-      }
+		if(_ds.search(_addr))
+		{
+			bool type_check=(_addr[0]==0x10);
+			bool crc_check=(OneWire::crc8(_addr,7)==_addr[7]);
 
-      if(found)
-      {
-        ds.reset();
-        ds.select(addr);
-        ds.write(0x44, 1);
-        temp_timer=millis()+1000;
-        temp_reading=true;
-      }
-    }
-    else
-    {
-      ds.reset_search();
-    }
-  }
+			if(type_check&&crc_check)
+			{
+				bool found_id=false;
 
-  if(temp_reading&&millis()>=temp_timer)
-  {
-    ds.reset();
-    ds.select(addr);
-    ds.write(0xBE);
+				for(int ii=1;ii<size;++ii)
+				{
+					if(_compare_ids(_addr,ids[ii]))
+					{
+						_current_id=ii;
+						found_id=true;
+						break;
+					}
+				}
 
-    for (int ii=0;ii<9;++ii)
-      data[ii]=ds.read();
+				if(found_id)
+				{
+					_ds.reset();
+					_ds.select(_addr);
+					_ds.write(0x44, 1);
+					_timer=millis()+1000;
+					_reading=true;
+				}
+			}
+		}
+		else
+		{
+			_ds.reset_search();
+		}
+	}
 
-    OneWire::crc8(data, 8);
+	if(_reading&&millis()>=_timer)
+	{
+		_ds.reset();
+		_ds.select(_addr);
+		_ds.write(0xBE);
 
-    int16_t raw = (data[1] << 8) | data[0];
-    raw = raw << 3;
-    if (data[7] == 0x10)
-      raw = (raw & 0xFFF0) + 12 - data[6];
-    temp_values[current_id]= raw / 16.0 * 1.8 + 32.0;
-    temp_reading=false;
-    current_id=0;
-  }
+		for(byte ii=0;ii<9;++ii)
+			_data[ii]=_ds.read();
+
+		OneWire::crc8(_data,8);
+
+		int raw=*(int*)&_data[0];		//(_data[1]<<_8)|_data[0];
+		raw=raw<<3;
+		raw=(raw&0xFFF0)+12-_data[6];
+		values[_current_id]=raw/16.0*1.8+32.0;
+		_reading=false;
+		_current_id=0;
+	}
+}
+
+bool TempSensor::_compare_ids(byte* lhs,byte* rhs)
+{
+	bool match=true;
+
+	for(int ii=0;ii<8;++ii)
+	{
+		if(lhs[ii]!=rhs[ii])
+		{
+			match=false;
+			break;
+		}
+	}
+
+	return match;
 }
