@@ -1,6 +1,6 @@
 //Web Server Header
 //	Created By:		Mike Moss
-//	Modified On:	06/20/2013
+//	Modified On:	08/09/2013
 
 //Required Libraries:
 //	wsock32 (windows only)
@@ -26,7 +26,8 @@ namespace msl
 	{
 		public:
 			//Constructor (Default)
-			webserver(const std::string& address,bool(*user_service_client)(msl::socket& client,const std::string& message)=NULL);
+			webserver(const std::string& address,bool(*user_service_client)(msl::socket& client,const std::string& message)=NULL,
+				const std::string& web_directory="web");
 
 			//Boolean Operator (Tests if Server is Good)
 			operator bool() const;
@@ -53,6 +54,7 @@ namespace msl
 			msl::socket _socket;
 			std::vector<msl::socket> _clients;
 			std::vector<std::string> _client_messages;
+			std::string _web_directory;
 	};
 }
 

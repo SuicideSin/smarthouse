@@ -1,10 +1,13 @@
 //Serial Sync Header
 //	Created By:		Mike Moss
-//	Modified On:	07/11/2013
+//	Modified On:	08/28/2013
 
 //Begin Define Guards
 #ifndef MSL_SERIALSYNC_H
 #define MSL_SERIALSYNC_H
+
+//Integer Standard Types Header
+#include <inttypes.h>
 
 //Serial Header
 #include "serial.hpp"
@@ -12,8 +15,8 @@
 //String Header
 #include <string>
 
-//Vector Header
-#include <vector>
+//Number of Serial Variables
+#define MSL_SERIALSYNC_VARIABLES 85
 
 //MSL Namespace
 namespace msl
@@ -23,9 +26,15 @@ namespace msl
 	{
 		public:
 			//Constructor (Default)
-			serial_sync(const std::string& port="",const unsigned int baud=57600);
+			serial_sync(const std::string& port="",const uint32_t baud=57600);
 
-			//Boolean Operator (Tests if Server is Good)
+			//Setup Function (Sets up serial port)
+			void setup();
+
+			//Close Function (Closes Serial Port)
+			void close();
+
+			//Boolean Operator (Tests if Serial Port is Good)
 			operator bool() const;
 
 			//Not Operator (For Boolean Operator)
@@ -34,30 +43,30 @@ namespace msl
 			//Good Function (Tests if Serial Port is Good)
 			bool good() const;
 
-			//Setup Function (Sets Up Serial Port)
-			void setup();
+			//Update RX Function (Receives updates over link)
+			void update_rx();
 
-			//Update Function (Updates Data)
-			void update();
+			//Update TX Function (Sends updates over link)
+			void update_tx();
 
-			//Close Function (Closes Serial Port)
-			void close();
+			//Get Function (Gets a value from a variable)
+			int16_t get(const uint8_t index);
 
-			//Data Accessor (Non Const)
-			short& operator[](unsigned int index);
-
-			//Size Accessor
-			unsigned int size() const;
+			//Set Function (Sets a variable to a value)
+			void set(const uint8_t index,const int16_t value);
 
 		private:
+			//Calculate CRC Function (XORs all bytes together)
+			uint8_t calculate_crc(const uint8_t* buffer,const uint8_t size) const;
+
 			//Member Variables
+			uint32_t _baud;
 			msl::serial _serial;
-			int _serial_state;
-			int _serial_receive_size;
-			int _serial_receive_count;
-			unsigned char _serial_receive_index;
-			short _serial_receive_data;
-			std::vector<short> _data;
+			int16_t _data[MSL_SERIALSYNC_VARIABLES];
+			uint8_t _flags[MSL_SERIALSYNC_VARIABLES];
+			uint8_t _tx_packet[3+1+MSL_SERIALSYNC_VARIABLES*3+1];
+			uint8_t _rx_packet[3+1+MSL_SERIALSYNC_VARIABLES*3+1];
+			uint32_t _rx_counter;
 	};
 }
 

@@ -1,19 +1,55 @@
-//Serial Sync Source
+//Serial Sync Header
 //	Created By:		Mike Moss
-//	Modified On:	07/11/2013
+//	Modified On:	08/28/2013
 
 //Definitions for "serial_sync.hpp"
 #include "serial_sync.hpp"
 
-//Exception Header
-#include <stdexcept>
-
 //Constructor (Default)
-msl::serial_sync::serial_sync(const std::string& port,const unsigned int baud):_serial(port,baud),
-	_serial_state(0),_serial_receive_size(0),_serial_receive_count(0),_serial_receive_index(0),_serial_receive_data(0)
-{}
+msl::serial_sync::serial_sync(const std::string& port,const uint32_t baud):
+	_baud(baud),_serial(port,_baud),_rx_counter(0)
+{
+	//Zero Out Data Array
+	for(uint8_t ii=0;ii<MSL_SERIALSYNC_VARIABLES;++ii)
+	{
+		_data[ii]=0x0000;
+		_flags[ii]=0x00;
+	}
 
-//Boolean Operator (Tests if Server is Good)
+	//Zero Out Buffers
+	for(uint8_t ii=0;ii<3+1+MSL_SERIALSYNC_VARIABLES+1;++ii)
+	{
+		_tx_packet[ii]=0x00;
+		_rx_packet[ii]=0x00;
+	}
+}
+
+//Setup Function (Sets up serial port)
+void msl::serial_sync::setup()
+{
+	//Connect Serial Port
+	_serial.connect();
+
+	//Check Serial Port
+	if(_serial.good())
+	{
+		//Packet Header
+		_tx_packet[0]='m';
+		_tx_packet[1]='s';
+		_tx_packet[2]='l';
+
+		//Packet Size
+		_tx_packet[3]=0;
+
+		//Packet CRC
+		_tx_packet[3+1]=calculate_crc(_tx_packet,3+1);
+
+		//Send Packet
+		_serial.write(_tx_packet,3+1+1);
+	}
+}
+
+//Boolean Operator (Tests if Serial Port is Good)
 msl::serial_sync::operator bool() const
 {
 	return good();
@@ -31,109 +67,151 @@ bool msl::serial_sync::good() const
 	return _serial.good();
 }
 
-//Setup Function (Sets Up Serial Port)
-void msl::serial_sync::setup()
-{
-	_serial.connect();
-}
-
-//Update Function (Updates Data)
-void msl::serial_sync::update()
-{
-	if(good())
-	{
-		unsigned char temp;
-
-		while(_serial.available()>0&&_serial.read(&temp,1)==1)
-		{
-			//Parse Header (uaf)
-			if(_serial_state==0&&temp=='u')
-			{
-				_serial_state=1;
-			}
-			else if(_serial_state==1&&temp=='a')
-			{
-				_serial_state=2;
-			}
-			else if(_serial_state==2&&temp=='f')
-			{
-				_serial_state=3;
-			}
-
-			//Parse Number of Values
-			else if(_serial_state==3&&temp>0)
-			{
-				_serial_receive_size=static_cast<int>(temp);
-				_serial_state=4;
-			}
-
-			//Parse Value Index
-			else if(_serial_state==4)
-			{
-				//Get Index
-				_serial_receive_index=temp;
-
-				//Make Unsigned Int Version for Vector Resize
-				unsigned int index=static_cast<unsigned int>(_serial_receive_index);
-
-				//Resize If Necessary
-				if(index>=_data.size())
-					_data.resize(index+1);
-
-				//Next State
-				_serial_state=5;
-			}
-			else if(_serial_state==5)
-			{
-				//Read First Byte of Data
-				reinterpret_cast<unsigned char*>(&_serial_receive_data)[0]=temp;
-				_serial_state=6;
-			}
-			else if(_serial_state==6)
-			{
-				//Read First Byte of Data
-				reinterpret_cast<unsigned char*>(&_serial_receive_data)[1]=temp;
-
-				//Write Data
-				_data[_serial_receive_index]=_serial_receive_data;
-
-				//Increment Data Received Counter
-				++_serial_receive_count;
-
-				//Next State
-				_serial_state=4;
-			}
-			else
-			{
-				_serial_state=0;
-			}
-		}
-	}
-}
-
 //Close Function (Closes Serial Port)
 void msl::serial_sync::close()
 {
 	_serial.close();
 }
 
-//Data Accessor (Non Const)
-short& msl::serial_sync::operator[](unsigned int index)
+//Update RX Function (Receives updates over link)
+void msl::serial_sync::update_rx()
 {
-	//Max 255 Variables
-	if(index>255)
-		throw std::runtime_error("msl::serial_sync::operator[] - Invalid index!");
+	//Temporary Byte Variable
+	uint8_t temp;
 
-	//Resize If Necessary
-	if(index>=_data.size())
-		_data.resize(index+1);
+	//Read Bytes
+	while(_serial.available()>0&&_serial.read(&temp,1)==1)
+	{
+		//Put Byte in Buffer
+		_rx_packet[_rx_counter]=temp;
 
-	//Return Data
+		//Parse Header and Size
+		if((_rx_counter==0&&temp=='m')||(_rx_counter==1&&temp=='s')||(_rx_counter==2&&temp=='l')||_rx_counter==3)
+		{
+			//Increment Counter
+			++_rx_counter;
+		}
+
+		//Parse Data
+		else if(_rx_counter>3&&_rx_counter<3+1+(uint32_t)_rx_packet[3])
+		{
+			//Increment Counter
+			++_rx_counter;
+		}
+
+		//Parse CRC
+		else if(_rx_counter==3+1+(uint32_t)_rx_packet[3])
+		{
+			//Check CRC
+			if(temp==calculate_crc(_rx_packet,_rx_counter))
+			{
+
+				//Packet Size 0
+				if(_rx_packet[3]==0x00)
+				{
+					//Set All Variables t Update
+					for(uint8_t ii=0;ii<MSL_SERIALSYNC_VARIABLES;++ii)
+						_flags[ii]=0x01;
+
+					//Send Global Update
+					update_tx();
+				}
+
+				//Packet Size > 0
+				else
+				{
+					//Save Data
+					for(uint8_t ii=0;ii<_rx_packet[3];ii+=3)
+						if(_rx_packet[3+1+ii]<MSL_SERIALSYNC_VARIABLES)
+							_data[_rx_packet[3+1+ii]]=*(int16_t*)(_rx_packet+3+1+ii+1);
+				}
+			}
+
+			//Reset Counter
+			_rx_counter=0;
+		}
+
+		//Errors
+		else
+		{
+			//Reset Counter
+			_rx_counter=0;
+		}
+	}
+}
+
+//Update TX Function (Sends updates over link)
+void msl::serial_sync::update_tx()
+{
+	//Packet Header
+	_tx_packet[0]='m';
+	_tx_packet[1]='s';
+	_tx_packet[2]='l';
+
+	//Packet Size
+	_tx_packet[3]=0;
+
+	//Go Through Values
+	for(uint8_t ii=0;ii<MSL_SERIALSYNC_VARIABLES;++ii)
+	{
+		//If Set
+		if(_flags[ii])
+		{
+			//Add Value Index
+			_tx_packet[3+1+_tx_packet[3]+0]=ii;
+
+			//Add Value
+			_tx_packet[3+1+_tx_packet[3]+1]=*(((uint8_t*)_data)+2*ii+0);
+			_tx_packet[3+1+_tx_packet[3]+2]=*(((uint8_t*)_data)+2*ii+1);
+
+			//Increase Packet Size
+			_tx_packet[3]+=3;
+		}
+	}
+
+	//Check Size
+	if(_tx_packet[3]>0)
+	{
+		//Packet CRC
+		_tx_packet[3+1+_tx_packet[3]]=calculate_crc(_tx_packet,3+1+_tx_packet[3]);
+
+		//Send Packet
+		_serial.write(_tx_packet,3+1+_tx_packet[3]+1);
+	}
+
+	//Reset Set Flags
+	for(uint8_t ii=0;ii<MSL_SERIALSYNC_VARIABLES;++ii)
+		_flags[ii]=0x00;
+}
+
+//Get Function (Gets a value from a variable)
+int16_t msl::serial_sync::get(const uint8_t index)
+{
+	//Get Value
 	return _data[index];
 }
 
-//Size Accessor
-unsigned int msl::serial_sync::size() const
+//Set Function (Sets a variable to a value)
+void msl::serial_sync::set(const uint8_t index,const int16_t value)
 {
-	return _data.size();
+	//Set Value and Flag
+	if(index<MSL_SERIALSYNC_VARIABLES)
+	{
+		_data[index]=value;
+		_flags[index]=0x01;
+	}
+}
+
+//Calculate CRC Function (XORs all bytes together)
+uint8_t msl::serial_sync::calculate_crc(const uint8_t* buffer,const uint8_t size) const
+{
+	//CRC Return Value
+	uint8_t crc=0x00;
+
+	//XOR All the Bytes Together
+	for(uint8_t ii=0;ii<size;++ii)
+		crc^=((uint8_t*)buffer)[ii];
+
+	//Return CRC Value
+	return crc;
 }
