@@ -21,8 +21,8 @@ GK12 Smarthouse Web Source
 			var flot_data_size=300;
 			var flot_plot;
 			var flot_update_interval=500;
-			var flot_width=320;
-			var flot_height=240;
+			var flot_width=640;
+			var flot_height=160;
 			var flot_x_show=false;
 			var flot_x_min=0;
 			var flot_x_max=flot_data_size;
@@ -41,6 +41,12 @@ GK12 Smarthouse Web Source
 
 				//Set Flot Update Interval
 				setInterval(flot_update,flot_update_interval);
+
+				//Set Color Update Interval
+				setInterval(colors_get,1000);
+
+				//Set Color House Interval
+				setInterval(color_house,2000);
 			}
 
 			//Flot Pack XY Function (Makes a single column array into a double column array with data numberings)
@@ -69,7 +75,7 @@ GK12 Smarthouse Web Source
 					flot_temps[ii]=[];
 
 					for(var jj=0;jj<flot_data_size;++jj)
-						flot_temps[ii][jj]=75;
+						flot_temps[ii][jj]=0;
 
 					flot_graph_array[ii]=flot_pack_xy(flot_temps[ii]);
 				}
@@ -136,8 +142,151 @@ GK12 Smarthouse Web Source
 				xmlhttp.send(null);
 			}
 
-			//Update Color Function
-			function update_colors(number,color)
+			function color_house()
+			{
+				var xmlhttp=new XMLHttpRequest();
+
+				var fan1=true;
+				var fan2=true;
+				var fan3=true;
+				var fan4=true;
+
+				var temp1=70;
+				var temp2=68;
+				var temp3=65;
+				var temp4=71;
+				var desired1=71;
+				var desired2=71;
+				var desired3=71;
+				var desired4=71;
+
+				var dif1=desired1-temp1;
+				var dif2=desired2-temp2;
+				var dif3=desired3-temp3;
+				var dif4=desired4-temp4;
+
+				var c=document.getElementById("myCanvas");
+				var ctx=c.getContext("2d");
+
+				//room1
+				if(desired1-temp1>0)
+					ctx.fillStyle="#FF0000";
+				if(desired1-temp1==0)
+					ctx.fillStyle="#FFFFFF";
+				if(desired1-temp1<0)
+					ctx.fillStyle="#0000FF";
+				ctx.fillRect(0,0,320,140);
+
+				//room2
+				if(desired2-temp2>0)
+					ctx.fillStyle="#FF0000";
+				if(desired2-temp2==0)
+					ctx.fillStyle="#FFFFFF";
+				if(desired2-temp2<0)
+					ctx.fillStyle="#0000FF";
+				ctx.fillRect(320,0,320,140);
+
+				//room3
+				if(desired3-temp3>0)
+					ctx.fillStyle="#FF0000";
+				if(desired3-temp3==0)
+					ctx.fillStyle="#FFFFFF";
+				if(desired3-temp3<0)
+					ctx.fillStyle="#0000FF";
+				ctx.fillRect(0,140,320,140);
+
+				//room4
+				if(desired4-temp4>0)
+					ctx.fillStyle="#FF0000";
+				if(desired4-temp4==0)
+					ctx.fillStyle="#FFFFFF";
+				if(desired4-temp4<0)
+					ctx.fillStyle="#0000FF";
+				ctx.fillRect(320,140,320,140);
+
+				ctx.fillStyle="#FFFFFF";
+				ctx.fillRect(280,110,80,60);
+
+				//fan1
+				var grd=ctx.createRadialGradient(300,125,2,300,125,15)
+				if(fan1)
+					grd.addColorStop(0,"red");
+				else
+					grd.addColorStop(0,"white");
+				grd.addColorStop(1,"white");
+				ctx.fillStyle=grd;
+				ctx.fillRect(280,110,40,30);
+
+				//fan2
+				var grd=ctx.createRadialGradient(340,125,2,340,125,15)
+				if(fan2)
+					grd.addColorStop(0,"red");
+				else
+					grd.addColorStop(0,"white");
+				grd.addColorStop(1,"white");
+				ctx.fillStyle=grd;
+				ctx.fillRect(320,110,40,30);
+
+				//fan3
+				var grd=ctx.createRadialGradient(300,155,2,300,155,15)
+				if(fan3)
+					grd.addColorStop(0,"red");
+				else
+					grd.addColorStop(0,"white");
+				grd.addColorStop(1,"white");
+				ctx.fillStyle=grd;
+				ctx.fillRect(280,140,40,30);
+
+				//fan4
+				var grd=ctx.createRadialGradient(340,155,2,340,155,15)
+				if(fan4)
+					grd.addColorStop(0,"red");
+				else
+					grd.addColorStop(0,"white");
+				grd.addColorStop(1,"white");
+				ctx.fillStyle=grd;
+				ctx.fillRect(320,140,40,30);
+
+
+			}
+
+			//Colors Get Function
+			function colors_get()
+			{
+				//Create XML HTTP Request
+				var xmlhttp=new XMLHttpRequest();
+
+				//Set XML HTTP Request Return Function
+				xmlhttp.onreadystatechange=function()
+				{
+					if(xmlhttp.readyState==4&&xmlhttp.status==200)
+					{
+						//try
+						{
+							//Create JSON Object From Return Data
+							var return_json=JSON.parse(xmlhttp.responseText);
+
+							//Check For Valid JSON Object
+							if(return_json)
+							{
+								document.getElementById("color0").color.fromRGB(return_json[1],return_json[2],return_json[0]);
+								document.getElementById("color1").color.fromRGB(return_json[4],return_json[5],return_json[3]);
+								document.getElementById("color2").color.fromRGB(return_json[7],return_json[8],return_json[6]);
+								document.getElementById("color3").color.fromRGB(return_json[10],return_json[11],return_json[9]);
+							}
+						}
+						//catch(e)
+						{}
+					}
+				}
+
+				//Send XML HTTP Request
+				xmlhttp.open("GET",encodeURIComponent("colors?"),true);
+				xmlhttp.send(null);
+			}
+
+			//Colors Set Function
+			function colors_set(number,color)
 			{
 				//Pack Color Data Into JSON
 				var colors={};
@@ -175,15 +324,31 @@ GK12 Smarthouse Web Source
 	<body onload="initialize();">
 		<title>CyberAK Smarthouse Control</title>
 		<center><img src="http://facilities.alaska.edu/ua/eworf/images/UAF_LOGO.gif"></center>
-		<br>
 		<center>CyberAK Smarthouse Control</center>
 		<hr>
-		Room 1:<input class="color" onchange="update_colors(0,this.color);" readonly /><br>
-		Room 2:<input class="color" onchange="update_colors(1,this.color);" readonly /><br>
-		Room 3:<input class="color" onchange="update_colors(2,this.color);" readonly /><br>
-		Room 4:<input class="color" onchange="update_colors(3,this.color);" readonly /><br>
-		Temp:<input type="button" value="-" onclick="decrement_desired_temp();" /><input id="desired_temp" readonly/><input type="button" value="+" onclick="increment_desired_temp();" />
-		<br>
-		<div id="flot_plot"></div>
+		<TABLE><tr><td><b>Smarthouse Status:</b><br><input id="status" readonly size="10" /><br><br>
+			<TABLE><tr><td><b>Security:</b><br><input id="security" size="10" readonly /></td><td><b>Door:<b><br><input id="door" size="10" readonly /></td></tr></TABLE>
+			<br><br>
+			<b>Thermostat:</b><br><TABLE>
+				<tr><td><input type="button" value="-" /><input id="desired_temp1" size="2" readonly /><input type="button" value="+" /></td>
+				<td><input type="button" value="-" /><input id="desired_temp2" size="2" readonly /><input type="button" value="+" /></td></tr>
+				<tr><td><input type="button" value="-" /><input id="desired_temp3" size="2" readonly /><input type="button" value="+" /></td>
+				<td><input type="button" value="-" /><input id="desired_temp4" size="2" readonly /><input type="button" value="+" /></td></tr>
+				</TABLE>
+			<br><br>
+			<b>Lights:</b><br><TABLE>
+				<tr><td><input class="color" id="color0" onchange="colors_set(0,this.color);" size="5" readonly /></td>
+				<td><input class="color" id="color1" onchange="colors_set(1,this.color);" size="5" readonly /></td></tr>
+				<tr><td><input class="color" id="color2" onchange="colors_set(2,this.color);" size="5" readonly /></td>
+				<td><input class="color" id="color3" onchange="colors_set(3,this.color);" size="5" readonly /></td></tr>
+			</TABLE><br>
+			OLDTemp:<input type="button" value="-" onclick="decrement_desired_temp();" /><input id="desired_temp" size="2" readonly /><input type="button" value="+" onclick="increment_desired_temp();" />
+			<br>
+			</td><td>
+			<div id="flot_plot"></div><br>
+			<canvas id="myCanvas" width="640" height="280" style="border:1px solid #000000;">
+
+			</canvas>
+			</td></tr></TABLE>
 	</body>
 </html>

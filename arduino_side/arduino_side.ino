@@ -1,4 +1,4 @@
-#include "SerialSyncArduino.h"
+#include "serial_sync.h"
 
 #include "TempSensor.h"
 
@@ -22,11 +22,12 @@ uint8_t ws2803_bar[ws2803_num_leds];
 
 byte light_relay_pin=2;
 
-SerialSync ss(Serial,9600);
+msl::serial_sync ss(Serial,9600);
 
 void setup()
 {
   pinMode(3,INPUT);
+  pinMode(5,INPUT);
   pinMode(ws2803_clock_pin,OUTPUT);
   pinMode(ws2803_data_pin,OUTPUT);
   pinMode(10,OUTPUT);
@@ -34,11 +35,12 @@ void setup()
   pinMode(12,OUTPUT);
   pinMode(13,OUTPUT);
   pinMode(light_relay_pin,OUTPUT);
+  pinMode(A1,INPUT);
 
-  digitalWrite(10,LOW);
-  digitalWrite(11,LOW);
-  digitalWrite(12,LOW);
-  digitalWrite(13,LOW);
+  digitalWrite(10,HIGH);
+  digitalWrite(11,HIGH);
+  digitalWrite(12,HIGH);
+  digitalWrite(13,HIGH);
   digitalWrite(light_relay_pin,LOW);
 
   ss.setup();
@@ -47,6 +49,7 @@ void setup()
   ss.set(1,75);
   ss.set(2,75);
   ss.set(3,75);
+  ss.set(8,0);
 
   ws2803_setup();
 }
@@ -55,7 +58,7 @@ void loop()
 {
   temp_reader.loop(temp_id_size,temp_values,temp_id);
 
-  ss.loop();
+  ss.update_rx();
 
   if(millis()>temp_timer)
   {
@@ -96,8 +99,21 @@ void loop()
     digitalWrite(light_relay_pin,HIGH);
   else
     digitalWrite(light_relay_pin,LOW);
+    
+  short fans=0x0000;
+  fans|=(byte)digitalRead(10)<<0;
+  fans|=(byte)digitalRead(11)<<1;
+  fans|=(byte)digitalRead(12)<<2;
+  fans|=(byte)digitalRead(13)<<3;
+  ss.set(8,fans);
+  
+  ss.set(21,analogRead(A0));
+  ss.set(22,!digitalRead(A1));
+  ss.set(23,digitalRead(5));
 
   ws2803_loop();
+
+  ss.update_tx();
 }
 
 void ws2803_setup()

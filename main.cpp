@@ -1,6 +1,6 @@
 //GK12 Smarthouse Source
 //	Created By:		Mike Moss and Ben Neubauer
-//	Modified On:	08/03/2013
+//	Modified On:	08/29/2013
 
 //Serial Sync Variables
 //0			Temp Sensor * 100
@@ -16,6 +16,9 @@
 //12-14		BRG
 //15-17		BRG
 //18-20		BRG
+//21		Gas Sensor
+//22		Motion Sensor
+//23		Key Sensor
 
 //IO Stream Header
 #include <iostream>
@@ -24,7 +27,7 @@
 #include "msl/json.hpp"
 
 //Serial Sync Header
-#include "SerialSync.hpp"
+#include "msl/serial_sync.hpp"
 
 //Socket Header
 #include "msl/socket.hpp"
@@ -47,11 +50,14 @@
 //Web Server Header
 #include "msl/webserver.hpp"
 
+//Global Light Color Variables
+uint8_t light_colors[12];
+
 //Our Service Client Function Declaration
 bool service_client(msl::socket& client,const std::string& message);
 
 //Global Serial Sync Object
-SerialSync ss("/dev/ttyACM0",9600);
+msl::serial_sync ss("/dev/ttyACM0",9600);
 
 //Main
 int main(int argc,char* argv[])
@@ -89,14 +95,15 @@ int main(int argc,char* argv[])
 		server_passed=false;
 	}
 
+	ss=msl::serial_sync(server_serial,server_baud);
+	ss.setup();
+
 	//Check Serial
-	try
+	if(ss.good())
 	{
-		ss=SerialSync(server_serial,server_baud);
-		ss.setup();
 		std::cout<<"Serial "<<server_serial<<" "<<server_baud<<" =)"<<std::endl;
 	}
-	catch(...)
+	else
 	{
 		std::cout<<"Serial "<<server_serial<<" "<<server_baud<<" =("<<std::endl;
 		server_passed=false;
@@ -105,21 +112,34 @@ int main(int argc,char* argv[])
 	//Global Timer Variable (TESTING)
 	long timer=msl::millis();
 
+	//Set Lights
+	for(int ii=0;ii<12;++ii)
+		light_colors[ii]=128;
+
 	//Be a server...forever...
 	while(server_passed)
 	{
+		//Update Serial RX
+		ss.update_rx();
+
 		//Update Server
 		server.update();
-
-		//Update Serial
-		ss.loop();
 
 		//Check Temperatures (Every 200ms)
 		if(msl::millis()-timer>=200)
 		{
+			//std::cout<<ss.get(23)<<std::endl;
+
+			//Update Lights
+			for(int ii=0;ii<12;++ii)
+				ss.set(9+ii,light_colors[ii]);
+
 			//Update Timer
 			timer=msl::millis();
 		}
+
+		//Update Serial TX
+		ss.update_tx();
 
 		//Give OS a Break
 		usleep(0);
@@ -158,6 +178,22 @@ bool service_client(msl::socket& client,const std::string& message)
 		return true;
 	}
 
+	//Check For Color Get Request
+	else if(request=="/colors?")
+	{
+		//Package Colors in JSON
+		msl::json colors;
+
+		for(int ii=0;ii<12;++ii)
+			colors.set(msl::to_string(ii),msl::to_string((float)light_colors[ii]/255.0));
+
+		//Send Colors
+		client<<msl::http_pack_string(colors.str(),"text/plain");
+
+		//Return True (We serviced the client)
+		return true;
+	}
+
 	//Check For Color Set Request
 	else if(msl::starts_with(request,"/colors="))
 	{
@@ -167,33 +203,45 @@ bool service_client(msl::socket& client,const std::string& message)
 		//Change Color 0
 		if(colors.get("blue0")!=""&&colors.get("red0")!=""&&colors.get("green0")!="")
 		{
-			ss.set(9,(uint8_t)(msl::to_int(colors.get("blue0"))));
-			ss.set(10,(uint8_t)(msl::to_int(colors.get("red0"))));
-			ss.set(11,(uint8_t)(msl::to_int(colors.get("green0"))));
+			light_colors[0]=(uint8_t)(msl::to_int(colors.get("blue0")));
+			light_colors[1]=(uint8_t)(msl::to_int(colors.get("red0")));
+			light_colors[2]=(uint8_t)(msl::to_int(colors.get("green0")));
+			//ss.set(9,(uint8_t)(msl::to_int(colors.get("blue0"))));
+			//ss.set(10,(uint8_t)(msl::to_int(colors.get("red0"))));
+			//ss.set(11,(uint8_t)(msl::to_int(colors.get("green0"))));
 		}
 
 		//Change Color 1
 		if(colors.get("blue1")!=""&&colors.get("red1")!=""&&colors.get("green1")!="")
 		{
-			ss.set(12,(uint8_t)(msl::to_int(colors.get("blue1"))));
-			ss.set(13,(uint8_t)(msl::to_int(colors.get("red1"))));
-			ss.set(14,(uint8_t)(msl::to_int(colors.get("green1"))));
+			light_colors[3]=(uint8_t)(msl::to_int(colors.get("blue1")));
+			light_colors[4]=(uint8_t)(msl::to_int(colors.get("red1")));
+			light_colors[5]=(uint8_t)(msl::to_int(colors.get("green1")));
+			//ss.set(12,(uint8_t)(msl::to_int(colors.get("blue1"))));
+			//ss.set(13,(uint8_t)(msl::to_int(colors.get("red1"))));
+			//ss.set(14,(uint8_t)(msl::to_int(colors.get("green1"))));
 		}
 
 		//Change Color 2
 		if(colors.get("blue2")!=""&&colors.get("red2")!=""&&colors.get("green2")!="")
 		{
-			ss.set(15,(uint8_t)(msl::to_int(colors.get("blue2"))));
-			ss.set(16,(uint8_t)(msl::to_int(colors.get("red2"))));
-			ss.set(17,(uint8_t)(msl::to_int(colors.get("green2"))));
+			light_colors[6]=(uint8_t)(msl::to_int(colors.get("blue2")));
+			light_colors[7]=(uint8_t)(msl::to_int(colors.get("red2")));
+			light_colors[8]=(uint8_t)(msl::to_int(colors.get("green2")));
+			//ss.set(15,(uint8_t)(msl::to_int(colors.get("blue2"))));
+			//ss.set(16,(uint8_t)(msl::to_int(colors.get("red2"))));
+			//ss.set(17,(uint8_t)(msl::to_int(colors.get("green2"))));
 		}
 
 		//Change Color 3
 		if(colors.get("blue3")!=""&&colors.get("red3")!=""&&colors.get("green3")!="")
 		{
-			ss.set(18,(uint8_t)(msl::to_int(colors.get("blue3"))));
-			ss.set(19,(uint8_t)(msl::to_int(colors.get("red3"))));
-			ss.set(20,(uint8_t)(msl::to_int(colors.get("green3"))));
+			light_colors[9]=(uint8_t)(msl::to_int(colors.get("blue3")));
+			light_colors[10]=(uint8_t)(msl::to_int(colors.get("red3")));
+			light_colors[11]=(uint8_t)(msl::to_int(colors.get("green3")));
+			//ss.set(18,(uint8_t)(msl::to_int(colors.get("blue3"))));
+			//ss.set(19,(uint8_t)(msl::to_int(colors.get("red3"))));
+			//ss.set(20,(uint8_t)(msl::to_int(colors.get("green3"))));
 		}
 
 		//Return True (We serviced the client)
