@@ -8,18 +8,18 @@
 class TempSensor
 {
 	public:
-		TempSensor(const byte pin);
-		void loop(const int size,float* values,byte ids[][8]);
+		TempSensor(const uint8_t pin);
+		void loop(const int16_t size,float* values,uint8_t ids[][8]);
 
 	private:
-		bool _compare_ids(byte* lhs,byte* rhs);
+		bool _compare_ids(uint8_t* lhs,uint8_t* rhs);
 
 		OneWire _ds;
-		int _current_id;
-		long _timer;
+		int16_t _current_id;
+		int32_t _timer;
 		bool _reading;
-		byte _data[12];
-		byte _addr[8];
+		uint8_t _data[12];
+		uint8_t _addr[8];
 };
 
 #endif

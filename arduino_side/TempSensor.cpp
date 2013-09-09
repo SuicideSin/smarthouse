@@ -1,15 +1,17 @@
 #include "TempSensor.h"
 
-TempSensor::TempSensor(const byte pin):_ds(pin),_current_id(0),_timer(0),_reading(false)
+TempSensor::TempSensor(const uint8_t pin):_ds(pin),_current_id(0),_timer(0),_reading(false)
 {
-	for(byte ii=0;ii<12;++ii)
+	pinMode(pin,INPUT);
+
+	for(uint8_t ii=0;ii<12;++ii)
 		_data[ii]=0x00;
 
-	for(byte ii=0;ii<8;++ii)
+	for(uint8_t ii=0;ii<8;++ii)
 		_addr[ii]=0x00;
 }
 
-void TempSensor::loop(const int size,float* values,byte ids[][8])
+void TempSensor::loop(const int16_t size,float* values,uint8_t ids[][8])
 {
 	if(!_reading)
 	{
@@ -25,7 +27,7 @@ void TempSensor::loop(const int size,float* values,byte ids[][8])
 			{
 				bool found_id=false;
 
-				for(int ii=1;ii<size;++ii)
+				for(int16_t ii=1;ii<size;++ii)
 				{
 					if(_compare_ids(_addr,ids[ii]))
 					{
@@ -57,12 +59,12 @@ void TempSensor::loop(const int size,float* values,byte ids[][8])
 		_ds.select(_addr);
 		_ds.write(0xBE);
 
-		for(byte ii=0;ii<9;++ii)
+		for(uint8_t ii=0;ii<9;++ii)
 			_data[ii]=_ds.read();
 
 		OneWire::crc8(_data,8);
 
-		int raw=*(int*)&_data[0];		//(_data[1]<<_8)|_data[0];
+		int16_t raw=*(int16_t*)&_data[0];
 		raw=raw<<3;
 		raw=(raw&0xFFF0)+12-_data[6];
 		values[_current_id]=raw/16.0*1.8+32.0;
@@ -71,11 +73,11 @@ void TempSensor::loop(const int size,float* values,byte ids[][8])
 	}
 }
 
-bool TempSensor::_compare_ids(byte* lhs,byte* rhs)
+bool TempSensor::_compare_ids(uint8_t* lhs,uint8_t* rhs)
 {
 	bool match=true;
 
-	for(int ii=0;ii<8;++ii)
+	for(int16_t ii=0;ii<8;++ii)
 	{
 		if(lhs[ii]!=rhs[ii])
 		{

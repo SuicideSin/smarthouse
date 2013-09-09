@@ -4,10 +4,10 @@
 
 #include "SerialSyncArduino.h"
 
-SerialSync::SerialSync(HardwareSerial& serial,const unsigned int baud):_serial(&serial),
+SerialSync::SerialSync(HardwareSerial& serial,const uint16_t baud):_serial(&serial),
   _baud(baud),_current_index(0),_packet_pointer(0),_temp_data(0),_time(millis())
 {
-  for(unsigned int ii=0;ii<SERIAL_SYNC_DATA_SIZE;++ii)
+  for(uint16_t ii=0;ii<SERIAL_SYNC_DATA_SIZE;++ii)
   {
     _data[ii]=0;
     _change[ii]=false;
@@ -85,7 +85,7 @@ void SerialSync::loop()
 
   if(millis()>=_time+20)
   {
-    for(unsigned int ii=0;ii<SERIAL_SYNC_DATA_SIZE;++ii)
+    for(uint16_t ii=0;ii<SERIAL_SYNC_DATA_SIZE;++ii)
     {
       if(_change[ii])
       {

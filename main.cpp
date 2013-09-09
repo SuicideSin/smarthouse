@@ -8,7 +8,7 @@
 //2			Temp Sensor * 100
 //3			Temp Sensor * 100
 //4			Light Sensor
-//5			Temp Desired
+//5			UNUSED
 //6			Temp Min
 //7			Temp Max
 //8			Fans (Bit Field)
@@ -19,6 +19,10 @@
 //21		Gas Sensor
 //22		Motion Sensor
 //23		Key Sensor
+//24		Temp Desired 0
+//25		Temp Desired 1
+//26		Temp Desired 2
+//27		Temp Desired 3
 
 //IO Stream Header
 #include <iostream>
@@ -128,8 +132,6 @@ int main(int argc,char* argv[])
 		//Check Temperatures (Every 200ms)
 		if(msl::millis()-timer>=200)
 		{
-			//std::cout<<ss.get(23)<<std::endl;
-
 			//Update Lights
 			for(int ii=0;ii<12;++ii)
 				ss.set(9+ii,light_colors[ii]);
@@ -169,7 +171,17 @@ bool service_client(msl::socket& client,const std::string& message)
 		temperatures.set("1",ss.get(1)/100.0);
 		temperatures.set("2",ss.get(2)/100.0);
 		temperatures.set("3",ss.get(3)/100.0);
-		temperatures.set("desired",ss.get(5));
+		temperatures.set("desired0",ss.get(24));
+		temperatures.set("desired1",ss.get(25));
+		temperatures.set("desired2",ss.get(26));
+		temperatures.set("desired3",ss.get(27));
+		temperatures.set("gas",ss.get(21));
+		temperatures.set("motion",ss.get(22));
+		temperatures.set("security",ss.get(23));
+		temperatures.set("fan0",ss.get(8)&1);
+		temperatures.set("fan1",ss.get(8)&2);
+		temperatures.set("fan2",ss.get(8)&4);
+		temperatures.set("fan3",ss.get(8)&8);
 
 		//Send Temperatures
 		client<<msl::http_pack_string(temperatures.str(),"text/plain");
@@ -206,9 +218,6 @@ bool service_client(msl::socket& client,const std::string& message)
 			light_colors[0]=(uint8_t)(msl::to_int(colors.get("blue0")));
 			light_colors[1]=(uint8_t)(msl::to_int(colors.get("red0")));
 			light_colors[2]=(uint8_t)(msl::to_int(colors.get("green0")));
-			//ss.set(9,(uint8_t)(msl::to_int(colors.get("blue0"))));
-			//ss.set(10,(uint8_t)(msl::to_int(colors.get("red0"))));
-			//ss.set(11,(uint8_t)(msl::to_int(colors.get("green0"))));
 		}
 
 		//Change Color 1
@@ -217,9 +226,6 @@ bool service_client(msl::socket& client,const std::string& message)
 			light_colors[3]=(uint8_t)(msl::to_int(colors.get("blue1")));
 			light_colors[4]=(uint8_t)(msl::to_int(colors.get("red1")));
 			light_colors[5]=(uint8_t)(msl::to_int(colors.get("green1")));
-			//ss.set(12,(uint8_t)(msl::to_int(colors.get("blue1"))));
-			//ss.set(13,(uint8_t)(msl::to_int(colors.get("red1"))));
-			//ss.set(14,(uint8_t)(msl::to_int(colors.get("green1"))));
 		}
 
 		//Change Color 2
@@ -228,9 +234,6 @@ bool service_client(msl::socket& client,const std::string& message)
 			light_colors[6]=(uint8_t)(msl::to_int(colors.get("blue2")));
 			light_colors[7]=(uint8_t)(msl::to_int(colors.get("red2")));
 			light_colors[8]=(uint8_t)(msl::to_int(colors.get("green2")));
-			//ss.set(15,(uint8_t)(msl::to_int(colors.get("blue2"))));
-			//ss.set(16,(uint8_t)(msl::to_int(colors.get("red2"))));
-			//ss.set(17,(uint8_t)(msl::to_int(colors.get("green2"))));
 		}
 
 		//Change Color 3
@@ -239,9 +242,6 @@ bool service_client(msl::socket& client,const std::string& message)
 			light_colors[9]=(uint8_t)(msl::to_int(colors.get("blue3")));
 			light_colors[10]=(uint8_t)(msl::to_int(colors.get("red3")));
 			light_colors[11]=(uint8_t)(msl::to_int(colors.get("green3")));
-			//ss.set(18,(uint8_t)(msl::to_int(colors.get("blue3"))));
-			//ss.set(19,(uint8_t)(msl::to_int(colors.get("red3"))));
-			//ss.set(20,(uint8_t)(msl::to_int(colors.get("green3"))));
 		}
 
 		//Return True (We serviced the client)
@@ -249,11 +249,44 @@ bool service_client(msl::socket& client,const std::string& message)
 	}
 
 	//Check For Temperature Set Request
-	else if(msl::starts_with(request,"/desired_temp="))
+	else if(msl::starts_with(request,"/desired_temp0="))
 	{
 		//Set Desired Temperature
-		short desired_temp=msl::to_int(request.substr(14,request.size()-14));
-		ss.set(5,desired_temp);
+		short desired_temp=msl::to_int(request.substr(15,request.size()-15));
+		ss.set(24,desired_temp);
+
+		//Return True (We serviced the client)
+		return true;
+	}
+
+	//Check For Temperature Set Request
+	else if(msl::starts_with(request,"/desired_temp1="))
+	{
+		//Set Desired Temperature
+		short desired_temp=msl::to_int(request.substr(15,request.size()-15));
+		ss.set(25,desired_temp);
+
+		//Return True (We serviced the client)
+		return true;
+	}
+
+	//Check For Temperature Set Request
+	else if(msl::starts_with(request,"/desired_temp2="))
+	{
+		//Set Desired Temperature
+		short desired_temp=msl::to_int(request.substr(15,request.size()-15));
+		ss.set(26,desired_temp);
+
+		//Return True (We serviced the client)
+		return true;
+	}
+
+	//Check For Temperature Set Request
+	else if(msl::starts_with(request,"/desired_temp3="))
+	{
+		//Set Desired Temperature
+		short desired_temp=msl::to_int(request.substr(15,request.size()-15));
+		ss.set(27,desired_temp);
 
 		//Return True (We serviced the client)
 		return true;

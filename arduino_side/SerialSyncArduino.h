@@ -13,7 +13,7 @@
 class SerialSync
 {
   public:
-    SerialSync(HardwareSerial& serial,const unsigned int baud);
+    SerialSync(HardwareSerial& serial,const uint16_t baud);
     uint16_t get(const uint8_t index) const;
     void set(const uint8_t index,const uint16_t value);
     void setup();
@@ -21,13 +21,13 @@ class SerialSync
 
   private:
     HardwareSerial* _serial;
-    unsigned int _baud;
+    uint16_t _baud;
     uint16_t _data[SERIAL_SYNC_DATA_SIZE];
     bool _change[SERIAL_SYNC_DATA_SIZE];
     uint8_t _current_index;
     uint8_t _packet_pointer;
     uint16_t _temp_data;
-    long _time;
+    int32_t _time;
 };
 
 #endif
