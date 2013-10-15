@@ -1,6 +1,6 @@
 //Socket Header
 //	Created By:		Mike Moss
-//	Modified On:	05/20/2013
+//	Modified On:	10/11/2013
 
 //Required Libraries:
 //	wsock32 (windows only)
@@ -111,16 +111,10 @@ namespace msl
 			int available() const;
 
 			//Read Function (Returns Number of Bytes Read, -1 on Error)
-			int read(void* buffer,const unsigned int size,const int flags=0) const;
+			int read(void* buffer,const unsigned int size,const long time_out=0,const int flags=0) const;
 
 			//Write Function (Returns Number of Bytes Sent, -1 on Error)
-			int write(void* buffer,const unsigned int size,const int flags=0) const;
-
-			//Connection Timeout Mutator
-			void set_timeout(const long time_out);
-
-			//Connection Timeout Accessor
-			long timeout() const;
+			int write(const void* buffer,const unsigned int size,const long time_out=0,const int flags=0) const;
 
 			//IP Address Accessor (Read Only)
 			msl::ipv4 ip() const;
@@ -136,7 +130,6 @@ namespace msl
 			msl::ipv4 _address;
 			SOCKET _socket;
 			bool _hosting;
-			long _time_out;
 	};
 
 	//Socket Class Stream Operator (Templated Function)
@@ -149,12 +142,15 @@ namespace msl
 		ostr<<rhs;
 
 		//Write Data
-		lhs.write(reinterpret_cast<void*>(const_cast<char*>(ostr.str().c_str())),ostr.str().size());
+		lhs.write(reinterpret_cast<void*>(const_cast<char*>(ostr.str().c_str())),ostr.str().size(),200);
 
 		//Return Stream
 		return lhs;
 	}
 }
+
+//Socket Initialize Function (Sets up the use of sockets, operating system dependent...)
+void socket_init();
 
 //Socket Create Function (Hosts a Socket Locally)
 SOCKET socket_create(const msl::ipv4 ip,const long time_out=0,const bool UDP=false,const unsigned int buffersize=200);
@@ -172,13 +168,13 @@ SOCKET socket_close(const SOCKET socket);
 int socket_available(const SOCKET socket,const long time_out=0);
 
 //Socket Peek Function (Same as socket_read but Leaves Bytes in Socket Buffer)
-int socket_peek(const SOCKET socket,void* buffer,const unsigned int size,const long time_out=200,const int flags=0);
+int socket_peek(const SOCKET socket,void* buffer,const unsigned int size,const long time_out=0,const int flags=0);
 
 //Socket Read Function (Returns Number of Bytes Read, -1 on Error)
-int socket_read(const SOCKET socket,void* buffer,const unsigned int size,const long time_out=200,const int flags=0);
+int socket_read(const SOCKET socket,void* buffer,const unsigned int size,const long time_out=0,const int flags=0);
 
 //Socket Write Function (Returns Number of Bytes Sent, -1 on Error)
-int socket_write(const SOCKET socket,void* buffer,const unsigned int size,const long time_out=200,const int flags=0);
+int socket_write(const SOCKET socket,const void* buffer,const unsigned int size,const long time_out=200,const int flags=0);
 
 //End Define Guards
 #endif

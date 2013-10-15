@@ -1,13 +1,14 @@
-//Web Server Header
+//Web Server Threaded Header
 //	Created By:		Mike Moss
-//	Modified On:	09/24/2013
+//	Modified On:	10/03/2013
 
 //Required Libraries:
+// 	pthread
 //	wsock32 (windows only)
 
 //Begin Define Guards
-#ifndef MSL_WEBSERVER_H
-#define MSL_WEBSERVER_H
+#ifndef MSL_WEBSERVER_THREADED_H
+#define MSL_WEBSERVER_THREADED_H
 
 //Socket Header
 #include "socket.hpp"
@@ -15,18 +16,21 @@
 //String Header
 #include <string>
 
+//Thread Header
+#include <pthread.h>
+
 //Vector Header
 #include <vector>
 
 //MSL Namespace
 namespace msl
 {
-	//Web Server Class Declaration
-	class webserver
+	//Web Server Threaded Class Declaration
+	class webserver_threaded
 	{
 		public:
 			//Constructor (Default)
-			webserver(const std::string& address,bool(*user_service_client)(msl::socket& client,const std::string& message)=NULL,
+			webserver_threaded(const std::string& address,bool(*user_service_client)(msl::socket& client,const std::string& message)=NULL,
 				const std::string& web_directory="web");
 
 			//Boolean Operator (Tests if Server is Good)
@@ -44,16 +48,13 @@ namespace msl
 			//Update Function (Connects Clients and Runs Web Server)
 			void update();
 
-			//Close Function (Closes Server) (Warning!!!  This doesn't close all the threads, there is no way to kill a running joined thread in C++11...yet...)
+			//Close Function (Closes Server)
 			void close();
 
 		private:
 			//Member Variables
 			bool(*_user_service_client)(msl::socket& client,const std::string& message);
-			void service_client(msl::socket& client,const std::string& message);
 			msl::socket _socket;
-			std::vector<msl::socket> _clients;
-			std::vector<std::string> _client_messages;
 			std::string _web_directory;
 	};
 }
@@ -63,9 +64,9 @@ namespace msl
 
 //Example (You need to make a folder called web and put index.html and not_found.html, located in comments below this example, in it for this to work)
 /*
-//Basic Web Server Source
+//Threaded Web Server Source
 //	Created By:		Mike Moss
-//	Modified On:	09/24/2013
+//	Modified On:	10/03/2013
 
 //IO Stream Header
 #include <iostream>
@@ -76,8 +77,8 @@ namespace msl
 //String Stream Header
 #include <sstream>
 
-//Web Server Header
-#include "msl/webserver.hpp"
+//Web Server Threaded Header
+#include "msl/webserver_threaded.hpp"
 
 //Our Service Client Function Declaration
 bool service_client(msl::socket& client,const std::string& message);
@@ -93,7 +94,7 @@ int main(int argc,char* argv[])
 		server_port=argv[1];
 
 	//Create Server
-	msl::webserver server("0.0.0.0:"+server_port,service_client);
+	msl::webserver_threaded server("0.0.0.0:"+server_port,service_client);
 	server.setup();
 
 	//Check Server

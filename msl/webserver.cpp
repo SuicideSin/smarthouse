@@ -1,6 +1,6 @@
 //Web Server Source
 //	Created By:		Mike Moss
-//	Modified On:	08/09/2013
+//	Modified On:	09/24/2013
 
 //Required Libraries:
 //	wsock32 (windows only)
@@ -19,9 +19,6 @@
 
 //String Utility Header
 #include "string_util.hpp"
-
-//Time Utility Header
-#include "time_util.hpp"
 
 //Constructor (Default)
 msl::webserver::webserver(const std::string& address,bool(*user_service_client)(msl::socket& client,const std::string& message),
@@ -68,14 +65,17 @@ void msl::webserver::update()
 	//Handle Clients
 	for(unsigned int ii=0;ii<_clients.size();++ii)
 	{
-		//Service Good Clients
-		if(_clients[ii].good())
+		//Dead Check Variable
+		bool dead=false;
+
+		//Get a Byte
+		while(_clients[ii].good()&&_clients[ii].available()>0)
 		{
 			//Temp
 			char byte='\n';
 
 			//Get a Byte
-			while(_clients[ii].available()>0&&_clients[ii].read(&byte,1)==1)
+			if(_clients[ii].read(&byte,1)==1)
 			{
 				//Add the Byte to Client Buffer
 				_client_messages[ii]+=byte;
@@ -87,10 +87,17 @@ void msl::webserver::update()
 					_client_messages[ii].clear();
 				}
 			}
+
+			//If There are Bytes to Read But None are Readable then Client is "dead"
+			else
+			{
+				dead=true;
+				break;
+			}
 		}
 
 		//Disconnect Bad Clients
-		else
+		if(!_clients[ii].good()||dead)
 		{
 			_clients[ii].close();
 			_clients.erase(_clients.begin()+ii);
@@ -98,6 +105,7 @@ void msl::webserver::update()
 			--ii;
 		}
 	}
+
 
 	//Give OS a Break
 	usleep(0);
@@ -171,20 +179,30 @@ void msl::webserver::service_client(msl::socket& client,const std::string& messa
 
 			//Load File
 			if(msl::file_to_string(_web_directory+request,file,true))
-				client<<msl::http_pack_string(file,mime_type,false);
+			{
+				std::string response_str=msl::http_pack_string(file,mime_type,false);
+				client.write(response_str.c_str(),response_str.size());
+			}
 
 			//Bad File
 			else if(msl::file_to_string(_web_directory+"/not_found.html",file,true))
-				client<<msl::http_pack_string(file);
-		}
+			{
+				std::string response_str=msl::http_pack_string(file);
+				client.write(response_str.c_str(),response_str.size());
+			}
 
-		//Close Connection
-		client.close();
+			//No Bad File
+			else
+			{
+				std::string response_str=msl::http_pack_string("sorry...");
+				client.write(response_str.c_str(),response_str.size());
+			}
+		}
 	}
 
 	//Other Requests (Just kill connection...it's either hackers or idiots...)
 	else
 	{
-		client.close();
+			client.close();
 	}
 }

@@ -1,9 +1,12 @@
 //String Utility Source
 //	Created By:		Mike Moss
-//	Modified On:	03/12/2013
+//	Modified On:	10/12/2013
 
 //Definitions for "string_util.hpp"
 #include "string_util.hpp"
+
+//Algorithm Header
+#include <algorithm>
 
 //Convert To Boolean Function
 bool msl::to_bool(std::string value)
@@ -100,4 +103,30 @@ bool msl::ends_with(const std::string& str,const std::string& end)
 
 	//Default False
 	return false;
+}
+
+//To Lower Function (Returns a copy of a string that is all lower case)
+std::string msl::to_lower(const std::string& str)
+{
+	//Create Return String
+	std::string return_str=str;
+
+	//Convert to Lower Case
+	std::transform(str.begin(),str.end(),return_str.begin(),tolower);
+
+	//Return Lower Case String
+	return return_str;
+}
+
+//To Upper Function (Returns a copy of a string that is all upper case)
+std::string msl::to_upper(const std::string& str)
+{
+	//Create Return String
+	std::string return_str=str;
+
+	//Convert to Upper Case
+	std::transform(str.begin(),str.end(),return_str.begin(),toupper);
+
+	//Return Upper Case String
+	return return_str;
 }

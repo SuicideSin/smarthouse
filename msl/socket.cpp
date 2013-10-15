@@ -1,6 +1,6 @@
 //Socket Source
 //	Created By:		Mike Moss
-//	Modified On:	05/20/2013
+//	Modified On:	10/11/2013
 
 //Required Libraries:
 //	wsock32 (windows only)
@@ -20,7 +20,7 @@
 //Time Utility Header
 #include "time_util.hpp"
 
-//IPv4 Address Class Constructor(Default)
+//IPv4 Address Class Constructor (Default)
 msl::ipv4::ipv4(const unsigned char ip[4],const unsigned short port):_port(port)
 {
 	//If There's Data
@@ -67,7 +67,7 @@ msl::ipv4& msl::ipv4::operator=(const msl::ipv4& copy)
 	return *this;
 }
 
-//IPv4 Address Class Build Function(Returns Raw Socket Address)
+//IPv4 Address Class Build Function (Returns Raw Socket Address)
 sockaddr_in msl::ipv4::build() const
 {
 	sockaddr_in ret;
@@ -78,7 +78,7 @@ sockaddr_in msl::ipv4::build() const
 	return ret;
 }
 
-//IPv4 Address Class String Accessor(X.X.X.X:PORT)
+//IPv4 Address Class String Accessor (X.X.X.X:PORT)
 std::string msl::ipv4::str() const
 {
 	std::ostringstream ostr;
@@ -91,7 +91,7 @@ std::string msl::ipv4::str() const
 }
 
 //Constructor(Default)
-msl::socket::socket(const std::string& address):std::ostream(reinterpret_cast<std::streambuf*>(NULL)),_socket(SOCKET_ERROR),_hosting(false),_time_out(200)
+msl::socket::socket(const std::string& address):std::ostream(reinterpret_cast<std::streambuf*>(NULL)),_socket(SOCKET_ERROR),_hosting(false)
 {
 	//Parsing Variables
 	unsigned char ip[4]={0,0,0,0};
@@ -131,7 +131,7 @@ msl::socket::socket(const std::string& address):std::ostream(reinterpret_cast<st
 
 //Copy Constructor
 msl::socket::socket(const msl::socket& copy):std::ostream(reinterpret_cast<std::streambuf*>(NULL)),
-	_address(copy._address),_socket(copy._socket),_hosting(copy._hosting),_time_out(copy._time_out)
+	_address(copy._address),_socket(copy._socket),_hosting(copy._hosting)
 {}
 
 //Copy Assignment Operator
@@ -142,7 +142,6 @@ msl::socket& msl::socket::operator=(const msl::socket& copy)
 		_address=copy._address;
 		_socket=copy._socket;
 		_hosting=copy._hosting;
-		_time_out=copy._time_out;
 	}
 
 	return *this;
@@ -165,6 +164,12 @@ bool msl::socket::good() const
 {
 	//Check for Errored Socket
 	if(_socket==static_cast<unsigned int>(SOCKET_ERROR)||_socket==static_cast<unsigned int>(INVALID_SOCKET))
+		return false;
+
+	//Check for Disconnected Socket (Magic Situation of Select=1 and RECV=0)
+	char temp;
+
+	if(available()>0&&socket_peek(_socket,&temp,1)==0)
 		return false;
 
 	//Check Reading Error
@@ -223,27 +228,15 @@ int msl::socket::available() const
 }
 
 //Read Function (Returns -1 on Error Else Returns Number of Bytes Read)
-int msl::socket::read(void* buffer,const unsigned int size,const int flags) const
+int msl::socket::read(void* buffer,const unsigned int size,const long time_out,const int flags) const
 {
-	return socket_read(_socket,buffer,size,_time_out,flags);
+	return socket_read(_socket,buffer,size,time_out,flags);
 }
 
 //Write Function (Returns -1 on Error Else Returns Number of Bytes Sent)
-int msl::socket::write(void* buffer,const unsigned int size,const int flags) const
+int msl::socket::write(const void* buffer,const unsigned int size,const long time_out,const int flags) const
 {
-	return socket_write(_socket,buffer,size,_time_out,flags);
-}
-
-//Connection Timeout Mutator
-void msl::socket::set_timeout(const long time_out)
-{
-	_time_out=time_out;
-}
-
-//Connection Timeout Accessor
-long msl::socket::timeout() const
-{
-	return _time_out;
+	return socket_write(_socket,buffer,size,time_out,flags);
 }
 
 //IP Address Accessor (Read Only)
@@ -261,8 +254,8 @@ SOCKET msl::socket::system_socket() const
 //Temporary Socket Variables
 static bool socket_inited=false;
 
-//Socket Initialize Function
-static void socket_init()
+//Socket Initialize Function (Sets up the use of sockets, operating system dependent...)
+void socket_init()
 {
 	//If Not Initialized
 	if(!socket_inited)
@@ -442,30 +435,14 @@ int socket_available(const SOCKET socket,const long time_out)
 	//Initialize Sockets
 	socket_init();
 
-	//Return Variable
-	int return_value=-1;
-
 	//Reading Variables
 	timeval temp={0,0};
 	fd_set rfds;
 	FD_ZERO(&rfds);
 	FD_SET(socket,&rfds);
-	long time_start=msl::millis();
-
-	//While Socket is Good
-	do
-	{
-		//Try to Read from Socket
-		return_value=select(1+socket,&rfds,NULL,NULL,&temp);
-
-		//If Bytes Break
-		if(return_value>0)
-			break;
-	}
-	while(msl::millis()-time_start<time_out);
 
 	//Return Bytes Waiting
-	return return_value;
+	return select(1+socket,&rfds,NULL,NULL,&temp);
 }
 
 //Socket Peek Function (Same as socket_read but Leaves Bytes in Socket Buffer)
@@ -512,7 +489,7 @@ int socket_read(const SOCKET socket,void* buffer,const unsigned int size,const l
 }
 
 //Socket Write Function (Writes Bytes to Socket)
-int socket_write(const SOCKET socket,void* buffer,const unsigned int size,const long time_out,const int flags)
+int socket_write(const SOCKET socket,const void* buffer,const unsigned int size,const long time_out,const int flags)
 {
 	//Check for Bad Socket
 	if(socket==static_cast<unsigned int>(SOCKET_ERROR))
@@ -529,7 +506,7 @@ int socket_write(const SOCKET socket,void* buffer,const unsigned int size,const 
 	do
 	{
 		//Get Bytes in Send Buffer
-		unsigned int bytes_sent=send(socket,reinterpret_cast<char*>(buffer)+(size-bytes_unsent),bytes_unsent,flags);
+		unsigned int bytes_sent=send(socket,reinterpret_cast<const char*>(buffer)+(size-bytes_unsent),bytes_unsent,flags);
 
 		//If Bytes Were Sent
 		if(bytes_sent>0)
