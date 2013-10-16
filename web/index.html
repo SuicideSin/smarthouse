@@ -43,10 +43,16 @@ GK12 Smarthouse Web Source
 			fans[1]=false;
 			fans[2]=false;
 			fans[3]=false;
+			
+			//Global Status
+			var status_img;
 
 			//Initialize Function
 			function initialize()
 			{
+				//Initialize img
+				status_img = document.getElementById("status");
+				
 				//Initialize Flot
 				flot_setup();
 
@@ -117,10 +123,13 @@ GK12 Smarthouse Web Source
 					yaxis:{show:flot_y_show,min:flot_y_min,max:flot_y_max}
 				});
 			}
-
+			
 			//Flot Update Function
 			function flot_update()
 			{
+				var d = new Date();
+				status_img.src = "on.png?" + d.getTime();
+								
 				//Create XML HTTP Request
 				var xmlhttp=new XMLHttpRequest();
 
@@ -198,7 +207,7 @@ GK12 Smarthouse Web Source
 						{}
 					}
 				}
-
+			   
 				//Send XML HTTP Request
 				xmlhttp.open("GET",encodeURIComponent("temperatures?"),true);
 				xmlhttp.send(null);
@@ -336,6 +345,8 @@ GK12 Smarthouse Web Source
 				//Create and Send XML HTTP Request
 				var xmlhttp=new XMLHttpRequest();
 				xmlhttp.open("GET", encodeURIComponent("desired_temp"+room+"="+value),true);
+				xmlhttp.timeout = 4000;
+				xmlhttp.ontimeout  = function () { alert("Timed out!!!"); }
 				xmlhttp.send(null);
 			}
 		</script>
@@ -348,7 +359,7 @@ GK12 Smarthouse Web Source
 		<table>
 			<tr>
 				<td>
-					<b>Smarthouse Status:</b><br><input id="status" readonly size="10" /><br><br>
+					<b>Smarthouse Status:</b><IMG src="off.png" onerror="this.src='off.png'" id="status" hieght="20" width="20" /><br>
 					<table>
 						<tr>
 							<td><b>Security:</b><br><input id="security" value="open" size="10" readonly /></td>

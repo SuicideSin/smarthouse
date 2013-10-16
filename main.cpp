@@ -39,6 +39,9 @@
 //Socket Utility Header
 #include "msl/socket_util.hpp"
 
+//File Util
+#include "msl/file_util.hpp"
+
 //String Stream Header
 #include <sstream>
 
@@ -61,14 +64,14 @@ uint8_t light_colors[12];
 bool service_client(msl::socket& client,const std::string& message);
 
 //Global Serial Sync Object
-msl::serial_sync ss("/dev/ttyACM0",9600);
+msl::serial_sync ss("/dev/cu.usbmodem1411",9600);
 
 //Main
 int main(int argc,char* argv[])
 {
 	//Server Variables
 	std::string server_port="8080";
-	std::string server_serial="/dev/ttyACM0";
+	std::string server_serial="/dev/cu.usbmodem1411";
 	unsigned int server_baud=9600;
 	bool server_passed=true;
 
@@ -161,6 +164,21 @@ bool service_client(msl::socket& client,const std::string& message)
 	std::string request;
 	istr>>request;
 	istr>>request;
+	
+	//Check for signal request
+	if(msl::starts_with(request,"/on.png?"))
+	{
+		
+		//File Data Variable
+		std::string file;
+		
+		//Load File
+		if(msl::file_to_string("web/on.png",file,true))
+		{
+			client<<msl::http_pack_string(file,"image/png",false);
+		}
+		
+	}
 
 	//Check For Temperature Request
 	if(request=="/temperatures?")
